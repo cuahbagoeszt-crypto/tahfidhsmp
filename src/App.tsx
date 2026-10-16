@@ -3161,6 +3161,7 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
           targetAbs = getAbsolutePojok(tJuz, tPjk);
         }
 
+        // Kalkulasi: Target Lembaga dikurangi Capaian Ziyadah
         let diffPj = 0;
         if (targetAbs > 0 && maxAbs > 0) {
           diffPj = targetAbs - maxAbs;
@@ -3195,7 +3196,7 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
             <TrendingUp size={22} className="text-emerald-600" /> Perkembangan Ziyadah Santri (1 Tahun Penuh)
           </h2>
           <p className="text-xs text-slate-500 font-bold mt-1">
-            Monitoring perbandingan Target Lembaga dengan Capaian Ziyadah per bulan (Merah: Negatif/-, Kuning: 0, Hijau: Positif)
+            Monitoring perbandingan Target Lembaga dikurangi Capaian Ziyadah per bulan (Merah: Positif/Kurang, Kuning: 0/Pas, Hijau: Negatif/Melebihi)
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -3264,13 +3265,17 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
                   const m = s.monthlyData[b.kode] || {};
                   const diff = m.diffPj ?? 0;
                   
+                  // Logika Warna berdasarkan hasil (Target - Capaian):
+                  // - Jika diff > 0 (Positif): Target > Capaian -> Kurang dari target -> Merah
+                  // - Jika diff === 0 (Nol): Pas -> Kuning
+                  // - Jika diff < 0 (Negatif): Target < Capaian -> Melebihi target -> Hijau
                   let badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                  if (diff < 0) {
-                    badgeBg = 'bg-rose-100 text-rose-800 border-rose-200'; // Merah (-)
+                  if (diff > 0) {
+                    badgeBg = 'bg-rose-100 text-rose-800 border-rose-200'; // Merah (Kurang dari target)
                   } else if (diff === 0) {
-                    badgeBg = 'bg-amber-100 text-amber-800 border-amber-200'; // Kuning (0)
+                    badgeBg = 'bg-amber-100 text-amber-800 border-amber-200'; // Kuning (Pas)
                   } else {
-                    badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Hijau (Positif)
+                    badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Hijau (Melebihi target)
                   }
 
                   return (
