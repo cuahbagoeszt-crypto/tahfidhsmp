@@ -3161,7 +3161,6 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
           targetAbs = getAbsolutePojok(tJuz, tPjk);
         }
 
-        // Kalkulasi: Target Lembaga dikurangi Capaian Ziyadah
         let diffPj = 0;
         if (targetAbs > 0 && maxAbs > 0) {
           diffPj = targetAbs - maxAbs;
@@ -3196,7 +3195,7 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
             <TrendingUp size={22} className="text-emerald-600" /> Perkembangan Ziyadah Santri (1 Tahun Penuh)
           </h2>
           <p className="text-xs text-slate-500 font-bold mt-1">
-            Monitoring perbandingan Target Lembaga dikurangi Capaian Ziyadah per bulan (Merah: Negatif/-, Kuning: 0, Hijau: Positif)
+            Monitoring perbandingan Target Lembaga dengan Capaian Ziyadah per bulan (Merah: Negatif/-, Kuning: 0, Hijau: Positif)
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -3241,10 +3240,10 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
               <th className="border-r border-slate-200"></th>
               <th className="border-r border-slate-200"></th>
               {listBulanAjaran.map((b) => (
-                <React.Fragment key={b.kode}>
+                <Fragment key={b.kode}>
                   <th className="px-2 py-2 border-r border-slate-200 text-center font-bold">Capaian Ziyadah</th>
                   <th className="px-2 py-2 border-r border-slate-200 text-center font-bold">Total Pj (Selisih)</th>
-                </React.Fragment>
+                </Fragment>
               ))}
             </tr>
           </thead>
@@ -3265,10 +3264,6 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
                   const m = s.monthlyData[b.kode] || {};
                   const diff = m.diffPj ?? 0;
                   
-                  // Logika Warna sesuai permintaan:
-                  // Hasil negatif (-) -> Merah
-                  // Hasil 0 -> Kuning
-                  // Hasil positif -> Hijau
                   let badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200';
                   if (diff < 0) {
                     badgeBg = 'bg-rose-100 text-rose-800 border-rose-200'; // Merah (-)
@@ -3278,7 +3273,7 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
                     badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Hijau (Positif)
                   }
 
-                 return (
+                  return (
                     <Fragment key={b.kode}>
                       <td className="px-3 py-3.5 border-r border-slate-200 text-center">
                         {m.maxAbs > 0 ? (
