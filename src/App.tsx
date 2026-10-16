@@ -4023,6 +4023,7 @@ return (
                 {[
                   { id: 'dashboard', label: 'Dashboard Live', icon: <Activity size={18} /> },
                   { id: 'pantauan_input', label: 'Pantauan Input Ustadz', icon: <History size={18} /> },
+                  { id: 'perkembangan_ziyadah', label: 'Perkembangan Ziyadah Santri', icon: <TrendingUp size={18} /> },
                   { id: 'laporan', label: 'Laporan Format Excel', icon: <Printer size={18} /> },
                   { id: 'import', label: 'Import Excel Setoran', icon: <FileSpreadsheet size={18} /> },
                   { id: 'target', label: 'Pengaturan Target', icon: <Sliders size={18} /> },
