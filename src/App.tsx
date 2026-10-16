@@ -3932,6 +3932,7 @@ return (
             <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">
               {activeTab === 'dashboard' ? 'Dashboard Live' :
                activeTab === 'pantauan_input' ? 'Pantauan Input' :
+               activeTab === 'perkembangan_ziyadah' ? 'Perkembangan Ziyadah' :
                activeTab === 'laporan' ? 'Laporan Format Excel' :
                activeTab === 'import' ? 'Import Excel' :
                activeTab === 'target' ? 'Pengaturan Target' :
