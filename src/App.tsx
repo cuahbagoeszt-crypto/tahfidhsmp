@@ -106,6 +106,7 @@ const ExternalLink = createIcon('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2
 const Printer = createIcon('<polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>');
 const Plus = createIcon('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>');
 const Menu = createIcon('<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>');
+const TrendingUp = createIcon('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>');
 
 const SUPABASE_URL = 'https://mdpdpozahaibwepemmys.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcGRwb3phaGFpYndlcGVtbXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMjAxNDUsImV4cCI6MjEwNzY5NjE0NX0.ZkGYRrppNYAl3fHJuBjyqNDXsX2wKjL0fcui3_9dD_o';
@@ -3073,6 +3074,246 @@ function PantauanInputUstadzPanel({ ustadzList, santriList, rawLogs, onRefreshLo
   );
 }
 
+function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }: any) {
+  const [filterKelas, setFilterKelas] = useState('all');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // Daftar bulan 1 tahun ajaran (Juli - Juni)
+  const listBulanAjaran = [
+    { kode: '07', nama: 'Juli' },
+    { kode: '08', nama: 'Agustus' },
+    { kode: '09', nama: 'September' },
+    { kode: '10', nama: 'Oktober' },
+    { kode: '11', nama: 'November' },
+    { kode: '12', nama: 'Desember' },
+    { kode: '01', nama: 'Januari' },
+    { kode: '02', nama: 'Februari' },
+    { kode: '03', nama: 'Maret' },
+    { kode: '04', nama: 'April' },
+    { kode: '05', nama: 'Mei' },
+    { kode: '06', nama: 'Juni' },
+  ];
+
+  const processedSantriPerkembangan = useMemo(() => {
+    if (!Array.isArray(santriList)) return [];
+
+    return santriList.filter((s: any) => {
+      const kelasTarget = mapKelasTarget(s.kelas);
+      if (filterKelas !== 'all' && kelasTarget !== filterKelas) return false;
+      if (searchKeyword) {
+        const query = searchKeyword.toLowerCase();
+        const nama = (s.nama || '').toLowerCase();
+        const nis = (s.nis || '').toLowerCase();
+        if (!nama.includes(query) && !nis.includes(query)) return false;
+      }
+      return true;
+    }).map((s: any) => {
+      const kelasTarget = mapKelasTarget(s.kelas) || '7';
+      const sId = s.id;
+      const sNis = s.nis;
+
+      const logsSantri = (rawLogs || []).filter((l: any) => 
+        l.santri_id === sId || (sNis && l.santri_id === sNis)
+      ).sort((a: any, b: any) => String(a.tanggal || '').localeCompare(String(b.tanggal || '')));
+
+      const monthlyData: Record<string, any> = {};
+
+      listBulanAjaran.forEach((b) => {
+        const logsUpToMonth = logsSantri.filter((l: any) => {
+          if (!l.tanggal) return false;
+          const parts = String(l.tanggal).split(' ')[0].split('T')[0].split('-');
+          if (parts.length < 2) return false;
+          const m = parts[1];
+          return m <= b.kode || (b.kode >= '07' && m >= '07') || (b.kode <= '06' && m <= '06');
+        });
+
+        let maxAbs = 0;
+        let lastJ = 0;
+        let lastP = 0;
+        logsUpToMonth.forEach((l: any) => {
+          const k = String(l.kegiatan || '').toLowerCase();
+          if (k.includes('ziyadah') || k === '' || k.includes('tambah')) {
+            const j = safeExtractNum(l.juz_akhir);
+            const p = safeExtractNum(l.pojok_akhir);
+            if (j > 0) {
+              const abs = getAbsolutePojok(j, p);
+              if (abs >= maxAbs) {
+                maxAbs = abs;
+                lastJ = j;
+                lastP = p;
+              }
+            }
+          }
+        });
+
+        const customT = customTargetsLembaga?.[`${b.kode}_${kelasTarget}`];
+        let targetAbs = 0;
+        let tJuz = 0;
+        let tPjk = 0;
+        if (customT && (customT.juz > 0 || customT.pojokan > 0)) {
+          tJuz = customT.juz;
+          tPjk = customT.pojokan;
+          targetAbs = getAbsolutePojok(tJuz, tPjk);
+        } else if (DefaultTargetLembaga[b.kode]?.[kelasTarget]) {
+          const defT = DefaultTargetLembaga[b.kode][kelasTarget];
+          tJuz = defT.j;
+          tPjk = defT.p;
+          targetAbs = getAbsolutePojok(tJuz, tPjk);
+        }
+
+        // Kalkulasi: Target Lembaga dikurangi Capaian Ziyadah
+        let diffPj = 0;
+        if (targetAbs > 0 && maxAbs > 0) {
+          diffPj = targetAbs - maxAbs;
+        } else if (targetAbs > 0 && maxAbs === 0) {
+          diffPj = targetAbs;
+        }
+
+        monthlyData[b.kode] = {
+          juz: lastJ,
+          pojok: lastP,
+          maxAbs,
+          targetJuz: tJuz,
+          targetPojok: tPjk,
+          targetAbs,
+          diffPj,
+        };
+      });
+
+      return {
+        ...s,
+        kelasTarget,
+        monthlyData,
+      };
+    });
+  }, [santriList, rawLogs, filterKelas, searchKeyword, customTargetsLembaga]);
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+            <TrendingUp size={22} className="text-emerald-600" /> Perkembangan Ziyadah Santri (1 Tahun Penuh)
+          </h2>
+          <p className="text-xs text-slate-500 font-bold mt-1">
+            Monitoring perbandingan Target Lembaga dikurangi Capaian Ziyadah per bulan (Merah: Negatif/-, Kuning: 0, Hijau: Positif)
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Cari Nama / NIS..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-3.5 py-2 outline-none w-48 shadow-sm"
+          />
+          <select
+            value={filterKelas}
+            onChange={(e) => setFilterKelas(e.target.value)}
+            className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-3.5 py-2 outline-none cursor-pointer shadow-sm"
+          >
+            <option value="all">Semua Kelas (7 - 12)</option>
+            <option value="7">Kelas 7</option>
+            <option value="8">Kelas 8</option>
+            <option value="9">Kelas 9</option>
+            <option value="10">Kelas 10</option>
+            <option value="11">Kelas 11</option>
+            <option value="12">Kelas 12</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm max-h-[600px]">
+        <table className="min-w-full text-xs text-left border-collapse whitespace-nowrap">
+          <thead className="bg-slate-100 text-slate-700 font-black uppercase sticky top-0 z-20">
+            <tr>
+              <th className="px-4 py-3.5 border-r border-slate-200 sticky left-0 bg-slate-100 z-30">Nama Santri</th>
+              <th className="px-4 py-3.5 border-r border-slate-200">Kelas & Kamar</th>
+              <th className="px-4 py-3.5 border-r border-slate-200">Halaqoh</th>
+              {listBulanAjaran.map((b) => (
+                <th key={b.kode} colSpan={2} className="px-3 py-3.5 text-center border-r border-slate-200 bg-emerald-50/60 text-emerald-900">
+                  {b.nama}
+                </th>
+              ))}
+            </tr>
+            <tr className="bg-slate-50 text-[10px] text-slate-500 sticky top-[41px] z-20">
+              <th className="border-r border-slate-200 sticky left-0 bg-slate-50 z-30"></th>
+              <th className="border-r border-slate-200"></th>
+              <th className="border-r border-slate-200"></th>
+              {listBulanAjaran.map((b) => (
+                <React.Fragment key={b.kode}>
+                  <th className="px-2 py-2 border-r border-slate-200 text-center font-bold">Capaian Ziyadah</th>
+                  <th className="px-2 py-2 border-r border-slate-200 text-center font-bold">Total Pj (Selisih)</th>
+                </React.Fragment>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {processedSantriPerkembangan.map((s: any) => (
+              <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3.5 border-r border-slate-200 font-extrabold text-slate-800 sticky left-0 bg-white z-10">
+                  <div>{s.nama}</div>
+                  <div className="text-[10px] text-slate-400 font-bold">NIS: {s.nis || '-'}</div>
+                </td>
+                <td className="px-4 py-3.5 border-r border-slate-200 font-semibold text-slate-600">
+                  {s.kelas || '-'} • {s.kamar || '-'}
+                </td>
+                <td className="px-4 py-3.5 border-r border-slate-200 text-teal-700 font-bold">
+                  {s.halaqoh || '-'}
+                </td>
+                {listBulanAjaran.map((b) => {
+                  const m = s.monthlyData[b.kode] || {};
+                  const diff = m.diffPj ?? 0;
+                  
+                  // Logika Warna sesuai permintaan:
+                  // Hasil negatif (-) -> Merah
+                  // Hasil 0 -> Kuning
+                  // Hasil positif -> Hijau
+                  let badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                  if (diff < 0) {
+                    badgeBg = 'bg-rose-100 text-rose-800 border-rose-200'; // Merah (-)
+                  } else if (diff === 0) {
+                    badgeBg = 'bg-amber-100 text-amber-800 border-amber-200'; // Kuning (0)
+                  } else {
+                    badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Hijau (Positif)
+                  }
+
+                  return (
+                    <React.Fragment key={b.kode}>
+                      <td className="px-3 py-3.5 border-r border-slate-200 text-center">
+                        {m.maxAbs > 0 ? (
+                          <div className="font-bold text-slate-700">
+                            Juz {m.juz} Pjk {m.pojok}
+                            <div className="text-[9px] text-slate-400">Target: Juz {m.targetJuz} Pjk {m.targetPojok}</div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3.5 border-r border-slate-200 text-center">
+                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black border inline-block ${badgeBg}`}>
+                          {diff > 0 ? `+${diff} Pj` : `${diff} Pj`}
+                        </span>
+                      </td>
+                    </React.Fragment>
+                  );
+                })}
+              </tr>
+            ))}
+            {processedSantriPerkembangan.length === 0 && (
+              <tr>
+                <td colSpan={3 + listBulanAjaran.length * 2} className="text-center py-10 text-slate-400 font-bold">
+                  Tidak ada data santri yang ditemukan.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AdminView({ onBack }: any) {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -3847,6 +4088,16 @@ return (
           />
         )}
 
+        {/* ---> SISIPKAN KODE LANGKAH 4 DI SINI <--- */}
+        {activeTab === 'perkembangan_ziyadah' && (
+          <PerkembanganZiyadahPanel
+            santriList={santri}
+            rawLogs={rawLogs}
+            customTargetsLembaga={customTargetsLembaga}
+          />
+        )}
+        {/* ========================================= */}
+        
         {/* Halaman Dashboard Penilaian (Iframe Blogspot) */}
         {activeTab === 'penilaian' && (
           <div className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-4rem)] rounded-xl overflow-hidden shadow-sm bg-white border border-slate-200">
