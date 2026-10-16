@@ -107,9 +107,8 @@ const Printer = createIcon('<polyline points="6 9 6 2 18 2 18 9"></polyline><pat
 const Plus = createIcon('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>');
 const Menu = createIcon('<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>');
 
-const SUPABASE_URL = 'https://nkirqdfmppziridabvwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5raXJxZGZtcHB6aXJpZGFidndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDU5MDgsImV4cCI6MjEwNDQ4MTkwOH0.ctqZ3aw4j9_jSBI9uF2NO2YWJ1PpeM2yo_HU-yZUjXI';
-
+const SUPABASE_URL = 'https://mdpdpozahaibwepemmys.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcGRwb3phaGFpYndlcGVtbXlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMjAxNDUsImV4cCI6MjEwNzY5NjE0NX0.ZkGYRrppNYAl3fHJuBjyqNDXsX2wKjL0fcui3_9dD_o';
 let supabaseClientInstance: any = null;
 
 const getSupabase = async () => {
