@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 
 // Injeksi CSS Kritis ke document.head agar frame pertama selalu rapi & terpusat simetris
 if (typeof document !== 'undefined') {
@@ -3278,8 +3278,8 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
                     badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Hijau (Positif)
                   }
 
-                  return (
-                    <React.Fragment key={b.kode}>
+                 return (
+                    <Fragment key={b.kode}>
                       <td className="px-3 py-3.5 border-r border-slate-200 text-center">
                         {m.maxAbs > 0 ? (
                           <div className="font-bold text-slate-700">
@@ -3295,7 +3295,7 @@ function PerkembanganZiyadahPanel({ santriList, rawLogs, customTargetsLembaga }:
                           {diff > 0 ? `+${diff} Pj` : `${diff} Pj`}
                         </span>
                       </td>
-                    </React.Fragment>
+                    </Fragment>
                   );
                 })}
               </tr>
