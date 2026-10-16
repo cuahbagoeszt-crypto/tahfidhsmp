@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Rekapitulasi Halaqoh - Evaluasi 3 Target</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* Reset & Base Fonts (Font Excel Calibri/Arial Style) */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Calibri, Aptos, "Segoe UI", Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #000;
+      padding: 16px;
+      font-size: 11pt;
+    }
+
+    /* Floating Toolbar */
+    .toolbar-container {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .toolbar-title {
+      font-weight: bold;
+      font-size: 14pt;
+      color: #0f5132;
+    }
+    .control-label {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #475569;
+    }
+    select, input, button {
+      font-family: inherit;
+      font-size: 9.5pt;
+      padding: 5px 10px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+    }
+    button.btn-action {
+      background-color: #107c41; /* Excel green */
+      color: #fff;
+      border: 1px solid #0d5f32;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease-in-out;
+    }
+    button.btn-action:hover {
+      background-color: #0c6b37;
+    }
+    button.btn-secondary {
+      background-color: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+    }
+    button.btn-secondary:hover {
+      background-color: #e2e8f0;
+    }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background-color: #e2f0d9;
+      color: #385723;
+      border: 1px solid #a9d08e;
+      border-radius: 12px;
+      font-size: 8.5pt;
+      font-weight: bold;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #385723;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    /* Container Tabel Lembar Kerja (Spreadsheet Matrix) */
+    .sheet-wrapper {
+      background: #ffffff;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    /* Tabel Matrix Spreadsheet 100% Persis Gambar */
+    table.matrix-table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1380px;
+      font-size: 9.5pt;
+      line-height: 1.15;
+      border: 1.5px solid #000000;
+    }
+
+    table.matrix-table th, 
+    table.matrix-table td {
+      border: 1px solid #000000;
+      padding: 4px 6px;
+      vertical-align: middle;
+      height: 24px;
+    }
+
+    /* Header Styling Sesuai Template Asli */
+    th.col-header {
+      font-weight: bold;
+      text-align: center;
+      background-color: #ffffff;
+      color: #000000;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    /* Grup Header Khusus Warna Gambar */
+    th.grp-target-pojokan {
+      background-color: #e2efda !important; /* Hijau Pastel */
+      color: #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 9.5pt;
+    }
+    th.grp-target-lembaga {
+      background-color: #fff2cc !important; /* Kuning Gading */
+      color: #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 9.5pt;
+    }
+    th.grp-target-deresan {
+      background-color: #bdd7ee !important; /* Biru Pastel */
+      color: #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 9.5pt;
+    }
+
+    th.sub-month {
+      font-weight: bold;
+      font-size: 9pt;
+      text-align: center;
+    }
+    th.sub-month-pojokan { background-color: #e2efda; }
+    th.sub-month-lembaga { background-color: #fff2cc; }
+    th.sub-month-deresan { background-color: #bdd7ee; }
+
+    /* Kolom Warna Sel Data */
+    td.col-no { text-align: center; width: 34px; }
+    td.col-halaqoh { text-align: left; font-weight: 500; min-width: 220px; white-space: nowrap; }
+    td.col-kamar { text-align: center; width: 44px; }
+    td.col-kls { text-align: center; width: 40px; }
+    td.col-num { text-align: center; width: 50px; }
+
+    /* Kolom Status Ziadah & Khotimin */
+    td.col-masih-ziadah { text-align: center; background-color: #ffffff; width: 55px; }
+    td.col-boyong { text-align: center; background-color: #d9e1f2; width: 55px; }
+    td.col-khatam { text-align: center; background-color: #d9e1f2; width: 55px; }
+    td.col-khotimin { text-align: center; background-color: #fff2cc; width: 55px; }
+
+    /* Pewarnaan Sel Kondisional Persentase */
+    .cell-100 {
+      background-color: #2e75b6 !important;
+      color: #ffffff !important;
+      font-weight: bold;
+      text-align: center;
+    }
+    .cell-high {
+      background-color: #c6efce !important; /* Hijau muda */
+      color: #006100 !important;
+      text-align: center;
+    }
+    .cell-medium {
+      background-color: #fff2cc !important; /* Kuning muda */
+      color: #000000 !important;
+      text-align: center;
+    }
+    .cell-low {
+      background-color: #f8cbad !important; /* Peach / oranye muda */
+      color: #000000 !important;
+      text-align: center;
+    }
+    .cell-zero {
+      background-color: #fce4d6 !important; /* Pink / oranye pudar */
+      color: #c00000 !important;
+      font-weight: 500;
+      text-align: center;
+    }
+    .cell-dash {
+      color: #000000;
+      text-align: center;
+    }
+
+    /* Kolom Indikator Progres (IP) */
+    .ip-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-weight: bold;
+      font-size: 8.5pt;
+    }
+    .ip-up { color: #008000; }
+    .ip-down { color: #c00000; }
+    .ip-flat { color: #595959; }
+
+    /* Footer Row Total */
+    tr.footer-total {
+      background-color: #d9d9d9;
+      font-weight: bold;
+    }
+    tr.footer-total td {
+      text-align: center;
+      border-top: 2px solid #000;
+    }
+
+    /* Print Formatting */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .toolbar-container {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+      table.matrix-table {
+        min-width: 100%;
+        font-size: 7.5pt;
+      }
+      table.matrix-table th, table.matrix-table td {
+        padding: 2px 3px;
+        height: 18px;
+      }
+      @page {
+        size: A4 landscape;
+        margin: 8mm 6mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar-container">
+    <div class="toolbar-left">
+      <span class="toolbar-title">📊 REKAPITULASI TARGET HALAQOH</span>
+      <span class="live-badge"><span class="pulse-dot"></span> LIVE DATABASE</span>
+    </div>
+
+    <div class="toolbar-right">
+      <div>
+        <label class="control-label" for="selBulan">Bulan Evaluasi:</label>
+        <select id="selBulan" onchange="renderMatrixData()">
+          <option value="07">Juli (Jul'26)</option>
+          <option value="08" selected>Agustus (Agust'26)</option>
+          <option value="09">September (Sept'26)</option>
+          <option value="10">Oktober (Okt'26)</option>
+          <option value="11">November (Nov'26)</option>
+          <option value="12">Desember (Des'26)</option>
+          <option value="01">Januari (Jan'27)</option>
+          <option value="02">Februari (Feb'27)</option>
+          <option value="03">Maret (Mar'27)</option>
+          <option value="04">April (Apr'27)</option>
+          <option value="05">Mei (Mei'27)</option>
+          <option value="06">Juni (Jun'27)</option>
+          <option value="all">Satu Tahun Penuh</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="control-label" for="selKelas">Filter Jenjang:</label>
+        <select id="selKelas" onchange="renderMatrixData()">
+          <option value="all">Semua Kelas (7 - 12)</option>
+          <option value="7">Kelas 7</option>
+          <option value="8">Kelas 8</option>
+          <option value="9">Kelas 9</option>
+          <option value="10">Kelas 10</option>
+          <option value="11">Kelas 11</option>
+          <option value="12">Kelas 12</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="control-label" for="selSort">Urutkan:</label>
+        <select id="selSort" onchange="renderMatrixData()">
+          <option value="kamar-asc">Nomor Kamar (1 → 99)</option>
+          <option value="kamar-desc">Nomor Kamar (99 → 1)</option>
+          <option value="nama-asc">Nama Ustadz (A → Z)</option>
+          <option value="kelas-asc">Kelas (7 → 12)</option>
+          <option value="target-desc">Target Lembaga Tertinggi</option>
+        </select>
+      </div>
+
+      <button class="btn-secondary" onclick="loadDataFromSupabase(true)">🔄 Segarkan Data</button>
+      <button class="btn-action" onclick="exportToExcel()">📥 Download File Excel (.xlsx)</button>
+      <button class="btn-secondary" onclick="window.print()">🖨️ Cetak / PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet-wrapper">
+    <table class="matrix-table" id="tableLaporan">
+      <thead>
+        <!-- Header Baris 1: Grup Kategori & Indikator Target -->
+        <tr>
+          <th rowspan="3" class="col-header" style="width: 34px;">NO</th>
+          <th rowspan="3" class="col-header" style="min-width: 220px;">HALAQOH</th>
+          <th rowspan="3" class="col-header" style="width: 44px;">Kamar</th>
+          <th rowspan="3" class="col-header" style="width: 40px;">KLS</th>
+          <th rowspan="3" class="col-header" style="width: 52px;">JML<br>SANTRI</th>
+          <th rowspan="3" class="col-header" style="width: 55px;">MASIH<br>ZIADAH</th>
+          <th rowspan="3" class="col-header" style="width: 55px;">SANTRI<br>BOYONG</th>
+          <th rowspan="3" class="col-header" style="width: 55px;">KHATAM</th>
+          <th rowspan="3" class="col-header" style="width: 55px;">KHOTI<br>MIN</th>
+
+          <!-- GRUP 1: TARGET POJOKAN -->
+          <th colspan="3" class="grp-target-pojokan">TARGET POJOKAN</th>
+
+          <!-- GRUP 2: TARGET LEMBAGA -->
+          <th colspan="4" class="grp-target-lembaga">TARGET LEMBAGA</th>
+
+          <!-- GRUP 3: TARGET DERESAN -->
+          <th colspan="3" class="grp-target-deresan">TARGET DERESAN</th>
+        </tr>
+
+        <!-- Header Baris 2: Sub-Bulan Sesuai Pilihan -->
+        <tr>
+          <th colspan="2" class="sub-month sub-month-pojokan header-label-bulan">Agust'26</th>
+          <th rowspan="2" class="col-header sub-month-pojokan" style="width: 60px;">prosentas<br>e</th>
+
+          <th colspan="2" class="sub-month sub-month-lembaga header-label-bulan">Agust'26</th>
+          <th rowspan="2" class="col-header sub-month-lembaga" style="width: 45px;">IP</th>
+          <th rowspan="2" class="col-header sub-month-lembaga" style="width: 60px;">prosentase</th>
+
+          <th colspan="2" class="sub-month sub-month-deresan header-label-bulan">Agust'26</th>
+          <th rowspan="2" class="col-header sub-month-deresan" style="width: 60px;">prosentase</th>
+        </tr>
+
+        <!-- Header Baris 3: Kolom Rincian Sudah / Belum -->
+        <tr>
+          <th class="col-header sub-month-pojokan" style="width: 50px;">sudah</th>
+          <th class="col-header sub-month-pojokan" style="width: 50px;">belum</th>
+
+          <th class="col-header sub-month-lembaga" style="width: 50px;">sudah</th>
+          <th class="col-header sub-month-lembaga" style="width: 50px;">belum</th>
+
+          <th class="col-header sub-month-deresan" style="width: 50px;">sudah</th>
+          <th class="col-header sub-month-deresan" style="width: 50px;">belum</th>
+        </tr>
+      </thead>
+
+      <!-- Body Tabel Matrix -->
+      <tbody id="matrixBody">
+        <tr>
+          <td colspan="19" style="text-align: center; padding: 30px; font-style: italic; color: #64748b;">
+            Menghubungkan ke database Supabase dan mengkalkulasi matrix halaqoh...
+          </td>
+        </tr>
+      </tbody>
+
+      <!-- Footer Baris Total / Summary Keseluruhan -->
+      <tfoot id="matrixFooter"></tfoot>
+    </table>
+  </div>
+
+  <script>
+    // Konfigurasi Kredensial Database Supabase
+    const SUPABASE_URL = 'https://nkirqdfmppziridabvwb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5raXJxZGZtcHB6aXJpZGFidndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDU5MDgsImV4cCI6MjEwNDQ4MTkwOH0.ctqZ3aw4j9_jSBI9uF2NO2YWJ1PpeM2yo_HU-yZUjXI';
+
+    let supabaseClient = null;
+    let rawUstadz = [];
+    let rawSantri = [];
+    let rawLogs = [];
+    let customTargetsLembaga = {};
+    let customTargetsPojokan = {};
+    let customTargetsDeresan = {};
+
+    const POJOK_PER_JUZ = 20;
+
+    const LABEL_BULAN_MAP = {
+      "07": "Jul'26", "08": "Agust'26", "09": "Sept'26", "10": "Okt'26",
+      "11": "Nov'26", "12": "Des'26", "01": "Jan'27", "02": "Feb'27",
+      "03": "Mar'27", "04": "Apr'27", "05": "Mei'27", "06": "Jun'27",
+      "all": "Thn 2026/27"
+    };
+
+    // Standar Default Target Lembaga (Start Juz 1 Pojok 1)
+    const DefaultTargetLembaga = {
+      "07": { "7": {j: 1, p: 6}, "8": {j: 6, p: 6}, "9": {j: 11, p: 6}, "10": {j: 16, p: 6}, "11": {j: 21, p: 6}, "12": {j: 26, p: 6} },
+      "08": { "7": {j: 1, p: 15},"8": {j: 6, p: 15},"9": {j: 11, p: 15},"10": {j: 16, p: 15},"11": {j: 21, p: 15},"12": {j: 26, p: 15} },
+      "09": { "7": {j: 2, p: 5}, "8": {j: 7, p: 5}, "9": {j: 12, p: 5}, "10": {j: 17, p: 5}, "11": {j: 22, p: 5}, "12": {j: 27, p: 5} },
+      "10": { "7": {j: 2, p: 16},"8": {j: 7, p: 16},"9": {j: 12, p: 16},"10": {j: 17, p: 16},"11": {j: 22, p: 16},"12": {j: 27, p: 16} },
+      "11": { "7": {j: 3, p: 7}, "8": {j: 8, p: 7}, "9": {j: 13, p: 7}, "10": {j: 18, p: 7}, "11": {j: 23, p: 7}, "12": {j: 28, p: 7} },
+      "12": { "7": {j: 3, p: 18},"8": {j: 8, p: 18},"9": {j: 13, p: 18},"10": {j: 18, p: 18},"11": {j: 23, p: 18},"12": {j: 28, p: 18} },
+      "01": { "7": {j: 4, p: 4}, "8": {j: 9, p: 4}, "9": {j: 14, p: 4}, "10": {j: 19, p: 4}, "11": {j: 24, p: 4}, "12": {j: 29, p: 4} },
+      "02": { "7": {j: 4, p: 12},"8": {j: 9, p: 12},"9": {j: 14, p: 12},"10": {j: 19, p: 12},"11": {j: 24, p: 12},"12": {j: 29, p: 12} },
+      "03": { "7": {j: 4, p: 18},"8": {j: 9, p: 18},"9": {j: 14, p: 18},"10": {j: 19, p: 18},"11": {j: 24, p: 18},"12": {j: 29, p: 18} },
+      "04": { "7": {j: 5, p: 5}, "8": {j: 10, p: 5},"9": {j: 15, p: 5}, "10": {j: 20, p: 5}, "11": {j: 25, p: 5}, "12": {j: 30, p: 5} },
+      "05": { "7": {j: 5, p: 14},"8": {j: 10, p: 14},"9": {j: 15, p: 14},"10": {j: 20, p: 14},"11": {j: 25, p: 14},"12": {j: 30, p: 14} },
+      "06": { "7": {j: 5, p: 20},"8": {j: 10, p: 20},"9": {j: 15, p: 20},"10": {j: 20, p: 20},"11": {j: 25, p: 20},"12": {j: 30, p: 20} },
+      "all":{ "7": {j: 5, p: 20},"8": {j: 10, p: 20},"9": {j: 15, p: 20},"10": {j: 20, p: 20},"11": {j: 25, p: 20},"12": {j: 30, p: 20} }
+    };
+
+    const DefaultTargetPojokan = {
+      "07": { "7": 15, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "08": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "09": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "10": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "11": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "12": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "01": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "02": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "03": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "04": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "05": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "06": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 },
+      "all": { "7": 240, "8": 240, "9": 240, "10": 240, "11": 240, "12": 240 }
+    };
+
+    const DefaultTargetDeresan = {
+      "07": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "08": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "09": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "10": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "11": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "12": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "01": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "02": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "03": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "04": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "05": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "06": { "7": 20, "8": 30, "9": 30, "10": 40, "11": 40, "12": 40 },
+      "all": { "7": 240, "8": 360, "9": 360, "10": 480, "11": 480, "12": 480 }
+    };
+
+    // Helper: Ekstrak Angka Aman
+    function safeExtractNum(val) {
+      if (!val) return 0;
+      const m = String(val).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
+
+    // Helper: Hitung Absolute Pojok (Maju dari Juz 1 Pojok 1 = 1)
+    function getAbsolutePojok(juz, pojok) {
+      const j = parseInt(juz) || 0;
+      const p = parseInt(pojok) || 0;
+      if (j >= 1 && j <= 30) {
+        return (j - 1) * POJOK_PER_JUZ + Math.min(Math.max(0, p), POJOK_PER_JUZ);
+      }
+      return 0;
+    }
+
+    // Helper: Pemetaan Tingkat Kelas (7 s/d 12)
+    function mapKelasTarget(kelasString) {
+      if (!kelasString) return null;
+      const s = String(kelasString).toUpperCase().trim();
+      if (s.startsWith('12') || s.includes('XII')) return '12';
+      if (s.startsWith('11') || s.includes('XI')) return '11';
+      if (s.startsWith('10') || s.includes('X-') || s.includes('X ')) return '10';
+      if (s.startsWith('9') || s.includes('IX')) return '9';
+      if (s.startsWith('8') || s.includes('VIII')) return '8';
+      if (s.startsWith('7') || s.includes('VII')) return '7';
+      const m = s.match(/\b(7|8|9|10|11|12)\b/);
+      return m ? m[1] : null;
+    }
+
+    // Helper: Formatting Tampilan Angka Sel (0 / null diubah '-')
+    function formatCellVal(val) {
+      if (val === null || val === undefined || val === 0 || val === '0' || val === '-') {
+        return '<span class="cell-dash">-</span>';
+      }
+      return val;
+    }
+
+    // Helper: Formatting Sel Persentase Berdasarkan Ambang Batas
+    function formatPercentCell(pct, sudahCount) {
+      if (pct === 100) {
+        return `<td class="cell-100">${pct}%</td>`;
+      } else if (pct >= 70) {
+        return `<td class="cell-high">${pct}%</td>`;
+      } else if (pct >= 50) {
+        return `<td class="cell-medium">${pct}%</td>`;
+      } else if (pct > 0) {
+        return `<td class="cell-low">${pct}%</td>`;
+      } else {
+        return `<td class="cell-zero">${pct}%</td>`;
+      }
+    }
+
+    // Inisialisasi Supabase
+    function getSupabaseInstance() {
+      if (!supabaseClient && window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return supabaseClient;
+    }
+
+    async function loadDataFromSupabase(isManualRefresh = false) {
+      const client = getSupabaseInstance();
+      if (!client) {
+        setTimeout(() => loadDataFromSupabase(isManualRefresh), 300);
+        return;
+      }
+
+      if (isManualRefresh) {
+        document.getElementById('matrixBody').innerHTML = `
+          <tr><td colspan="19" style="text-align: center; padding: 25px; font-weight: bold; color: #0d5f32;">
+            Sedang menyegarkan data dari server Supabase...
+          </td></tr>
+        `;
+      }
+
+      try {
+        // 1. Ambil Data Ustadz
+        const { data: dUstadz } = await client.from('ustadz_rows').select('*');
+        if (dUstadz) rawUstadz = dUstadz;
+
+        // 2. Ambil Data Santri
+        const { data: dSantri } = await client.from('santri_rows').select('*');
+        if (dSantri) rawSantri = dSantri;
+
+        // 3. Ambil Target Tersimpan
+        try {
+          const { data: dTargetLembaga } = await client.from('target_lembaga_rows').select('*');
+          if (dTargetLembaga) {
+            dTargetLembaga.forEach(r => {
+              customTargetsLembaga[`${r.bulan}_${r.kelas}`] = { juz: r.juz || 0, pojokan: r.pojokan || 0 };
+            });
+          }
+        } catch(e) {}
+
+        try {
+          const { data: dTargetPojokan } = await client.from('target_pojokan_rows').select('*');
+          if (dTargetPojokan) {
+            dTargetPojokan.forEach(r => {
+              customTargetsPojokan[`${r.bulan}_${r.kelas}`] = r.jumlah_pojokan;
+            });
+          }
+        } catch(e) {}
+
+        try {
+          const { data: dTargetDeresan } = await client.from('target_deresan_rows').select('*');
+          if (dTargetDeresan) {
+            dTargetDeresan.forEach(r => {
+              customTargetsDeresan[`${r.bulan}_${r.kelas}`] = r.jumlah_pojokan;
+            });
+          }
+        } catch(e) {}
+
+        // 4. Ambil Batch Log Setoran Secara Utuh
+        let allLogs = [];
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch, error } = await client
+            .from('log_setoran_rows')
+            .select('*')
+            .range(from, from + pageSize - 1);
+
+          if (error || !batch || batch.length === 0) {
+            hasMore = false;
+          } else {
+            allLogs = allLogs.concat(batch);
+            if (batch.length < pageSize) {
+              hasMore = false;
+            } else {
+              from += pageSize;
+            }
+          }
+        }
+        rawLogs = allLogs;
+
+        // Render Matrix
+        renderMatrixData();
+      } catch (err) {
+        console.error("Gagal memuat data Supabase:", err);
+        document.getElementById('matrixBody').innerHTML = `
+          <tr><td colspan="19" style="text-align: center; padding: 25px; color: #dc2626;">
+            Gagal mengambil data dari Supabase. Silakan periksa koneksi internet Anda.
+          </td></tr>
+        `;
+      }
+    }
+
+    function renderMatrixData() {
+      const bulan = document.getElementById('selBulan').value;
+      const filterKelas = document.getElementById('selKelas').value;
+      const sortOption = document.getElementById('selSort').value;
+
+      // Update Label Header Bulan
+      const labelBulan = LABEL_BULAN_MAP[bulan] || "Agust'26";
+      document.querySelectorAll('.header-label-bulan').forEach(el => el.textContent = labelBulan);
+
+      // Map Ustadz & Kamar
+      const uMap = {};
+      rawUstadz.forEach(u => {
+        if (u.nama) {
+          const clean = u.nama.toLowerCase().replace(/[^a-z0-9]/g, '');
+          uMap[clean] = {
+            id: u.id,
+            nama: u.nama,
+            kamar: u.kamar || '',
+            kamarNum: safeExtractNum(u.kamar)
+          };
+        }
+      });
+
+      // Kelompokkan Santri per Halaqoh
+      const halaqohGroups = {};
+
+      rawSantri.forEach(s => {
+        const hName = s.halaqoh || 'Tanpa Halaqoh';
+        const cleanH = hName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const uInfo = uMap[cleanH] || {
+          id: '',
+          nama: hName,
+          kamar: s.kamar || '',
+          kamarNum: safeExtractNum(s.kamar)
+        };
+
+        const klsNum = mapKelasTarget(s.kelas) || '7';
+        if (filterKelas !== 'all' && klsNum !== filterKelas) return;
+
+        if (!halaqohGroups[hName]) {
+          halaqohGroups[hName] = {
+            nama: hName,
+            kamar: uInfo.kamar || s.kamar || '',
+            kamarNum: uInfo.kamarNum || safeExtractNum(s.kamar),
+            kelasSet: new Set(),
+            santriList: []
+          };
+        }
+
+        halaqohGroups[hName].kelasSet.add(klsNum);
+        halaqohGroups[hName].santriList.push({
+          ...s,
+          klsNum,
+          maxZiyadahAbs: 0,
+          totalZiyadahBulan: 0,
+          totalMurojaahBulan: 0,
+          statusBoyong: String(s.status || '').toLowerCase().includes('boyong'),
+          statusKhatam: false,
+          statusKhotimin: false
+        });
+      });
+
+      // Analisis Log Setoran Santri
+      const santriStatsMap = {};
+      Object.values(halaqohGroups).forEach(g => {
+        g.santriList.forEach(s => {
+          santriStatsMap[s.id] = s;
+          if (s.nis) santriStatsMap[String(s.nis).trim()] = s;
+        });
+      });
+
+      rawLogs.forEach(log => {
+        const s = santriStatsMap[log.santri_id];
+        if (!s) return;
+
+        const keg = String(log.kegiatan || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isMurojaah = keg.includes('muroja') || keg.includes('muraja') || keg.includes('ulang');
+        const isZiyadah = keg.includes('ziyadah') || keg === '' || keg.includes('tambah');
+
+        let logBulan = '';
+        if (log.tanggal) {
+          const parts = String(log.tanggal).split(' ')[0].split('T')[0].split('-');
+          if (parts.length >= 2) logBulan = parts[1];
+        }
+
+        if (isMurojaah && (bulan === 'all' || logBulan === bulan)) {
+          let hal = parseFloat(String(log.jumlah_halaman || '0').replace(',', '.'));
+          if (isNaN(hal) || hal === 0) hal = safeExtractNum(log.jumlah_halaman) || 0;
+          s.totalMurojaahBulan += hal;
+        }
+
+        if (isZiyadah) {
+          if (bulan === 'all' || logBulan === bulan) {
+            let hal = parseFloat(String(log.jumlah_halaman || '0').replace(',', '.'));
+            if (isNaN(hal) || hal === 0) {
+              if (log.juz_awal && log.pojok_awal && log.juz_akhir && log.pojok_akhir) {
+                const st = getAbsolutePojok(log.juz_awal, log.pojok_awal);
+                const en = getAbsolutePojok(log.juz_akhir, log.pojok_akhir);
+                hal = Math.max(0, Math.abs(en - st) + 1);
+              } else {
+                hal = safeExtractNum(log.jumlah_halaman) || 1;
+              }
+            }
+            s.totalZiyadahBulan += hal;
+          }
+
+          const j = safeExtractNum(log.juz_akhir);
+          const p = safeExtractNum(log.pojok_akhir);
+          if (j >= 1 && j <= 30) {
+            const abs = getAbsolutePojok(j, p);
+            if (abs > s.maxZiyadahAbs) s.maxZiyadahAbs = abs;
+          }
+        }
+      });
+
+      // Hitung Evaluasi Matrix per Halaqoh
+      const matrixRows = [];
+      const bulanKey = bulan === 'all' ? "08" : bulan;
+
+      Object.values(halaqohGroups).forEach(g => {
+        const jmlSantri = g.santriList.length;
+        if (jmlSantri === 0) return;
+
+        let masihZiadah = 0;
+        let santriBoyong = 0;
+        let santriKhatam = 0;
+        let santriKhotimin = 0;
+
+        let targetPojokanSudah = 0;
+        let targetPojokanBelum = 0;
+
+        let targetLembagaSudah = 0;
+        let targetLembagaBelum = 0;
+
+        let targetDeresanSudah = 0;
+        let targetDeresanBelum = 0;
+
+        // Penentuan Kelas Dominan
+        const kelasList = Array.from(g.kelasSet).sort((a,b) => parseInt(a) - parseInt(b));
+        const klsDominan = kelasList.length > 0 ? kelasList[0] : '7';
+
+        g.santriList.forEach(s => {
+          const cls = s.klsNum || '7';
+
+          // Status Khotimin / Khatam (Khatam jika mencapai Juz 30 Pojok 20)
+          if (s.maxZiyadahAbs >= 30 * POJOK_PER_JUZ) {
+            s.statusKhatam = true;
+            santriKhatam++;
+          }
+          if (s.statusBoyong) {
+            santriBoyong++;
+          } else if (!s.statusKhatam) {
+            masihZiadah++;
+          }
+          if (cls === '12' && s.statusKhatam) {
+            santriKhotimin++;
+          }
+
+          // 1. Evaluasi Target Pojokan
+          const targetPojokanMin = customTargetsPojokan[`${bulanKey}_${cls}`] ?? DefaultTargetPojokan[bulanKey]?.[cls] ?? 20;
+          if (s.totalZiyadahBulan >= targetPojokanMin) {
+            targetPojokanSudah++;
+          } else {
+            targetPojokanBelum++;
+          }
+
+          // 2. Evaluasi Target Lembaga
+          const customTL = customTargetsLembaga[`${bulanKey}_${cls}`];
+          let targetLembagaAbs = 0;
+          if (customTL && (customTL.juz > 0 || customTL.pojokan > 0)) {
+            targetLembagaAbs = getAbsolutePojok(customTL.juz, customTL.pojokan);
+          } else {
+            const defTL = DefaultTargetLembaga[bulanKey]?.[cls] || { j: 1, p: 15 };
+            targetLembagaAbs = getAbsolutePojok(defTL.j, defTL.p);
+          }
+
+          if (targetLembagaAbs > 0 && s.maxZiyadahAbs >= targetLembagaAbs) {
+            targetLembagaSudah++;
+          } else {
+            targetLembagaBelum++;
+          }
+
+          // 3. Evaluasi Target Deresan
+          const targetDeresanMin = customTargetsDeresan[`${bulanKey}_${cls}`] ?? DefaultTargetDeresan[bulanKey]?.[cls] ?? 30;
+          if (s.totalMurojaahBulan >= targetDeresanMin) {
+            targetDeresanSudah++;
+          } else {
+            targetDeresanBelum++;
+          }
+        });
+
+        // Persentase & Indikator IP
+        const pctPojokan = jmlSantri > 0 ? Math.round((targetPojokanSudah / jmlSantri) * 100) : 0;
+        const pctLembaga = jmlSantri > 0 ? Math.round((targetLembagaSudah / jmlSantri) * 100) : 0;
+        const pctDeresan = jmlSantri > 0 ? Math.round((targetDeresanSudah / jmlSantri) * 100) : 0;
+
+        // Indikator Progres (IP) = Selisih capaian dibanding baseline target (simulasi delta IP)
+        const selisihIP = targetLembagaSudah - targetLembagaBelum;
+        let ipSymbol = '▬';
+        let ipClass = 'ip-flat';
+        if (selisihIP > 0) {
+          ipSymbol = `▲ ${selisihIP}`;
+          ipClass = 'ip-up';
+        } else if (selisihIP < 0) {
+          ipSymbol = `▼ ${selisihIP}`;
+          ipClass = 'ip-down';
+        }
+
+        matrixRows.push({
+          nama: g.nama,
+          kamar: g.kamar,
+          kamarNum: g.kamarNum,
+          kls: kelasList.join(', '),
+          klsPrimaryNum: parseInt(klsDominan) || 7,
+          jmlSantri,
+          masihZiadah,
+          santriBoyong,
+          santriKhatam,
+          santriKhotimin,
+          targetPojokanSudah,
+          targetPojokanBelum,
+          pctPojokan,
+          targetLembagaSudah,
+          targetLembagaBelum,
+          ipSymbol,
+          ipClass,
+          pctLembaga,
+          targetDeresanSudah,
+          targetDeresanBelum,
+          pctDeresan
+        });
+      });
+
+      // Pengurutan (Sorting)
+      matrixRows.sort((a, b) => {
+        if (sortOption === 'kamar-asc') {
+          if (a.kamarNum === 0 && b.kamarNum > 0) return 1;
+          if (b.kamarNum === 0 && a.kamarNum > 0) return -1;
+          if (a.kamarNum !== b.kamarNum) return a.kamarNum - b.kamarNum;
+          return a.nama.localeCompare(b.nama);
+        }
+        if (sortOption === 'kamar-desc') {
+          if (a.kamarNum === 0 && b.kamarNum > 0) return 1;
+          if (b.kamarNum === 0 && a.kamarNum > 0) return -1;
+          if (a.kamarNum !== b.kamarNum) return b.kamarNum - a.kamarNum;
+          return b.nama.localeCompare(a.nama);
+        }
+        if (sortOption === 'nama-asc') return a.nama.localeCompare(b.nama);
+        if (sortOption === 'kelas-asc') {
+          if (a.klsPrimaryNum !== b.klsPrimaryNum) return a.klsPrimaryNum - b.klsPrimaryNum;
+          return a.kamarNum - b.kamarNum;
+        }
+        if (sortOption === 'target-desc') return b.pctLembaga - a.pctLembaga;
+        return 0;
+      });
+
+      // Render Baris ke Tabel Matrix
+      const tbody = document.getElementById('matrixBody');
+      tbody.innerHTML = '';
+
+      let totSantri = 0;
+      let totMasihZiadah = 0;
+      let totBoyong = 0;
+      let totKhatam = 0;
+      let totKhotimin = 0;
+
+      let totPojokanSudah = 0;
+      let totPojokanBelum = 0;
+
+      let totLembagaSudah = 0;
+      let totLembagaBelum = 0;
+
+      let totDeresanSudah = 0;
+      let totDeresanBelum = 0;
+
+      matrixRows.forEach((r, idx) => {
+        totSantri += r.jmlSantri;
+        totMasihZiadah += r.masihZiadah;
+        totBoyong += r.santriBoyong;
+        totKhatam += r.santriKhatam;
+        totKhotimin += r.santriKhotimin;
+
+        totPojokanSudah += r.targetPojokanSudah;
+        totPojokanBelum += r.targetPojokanBelum;
+
+        totLembagaSudah += r.targetLembagaSudah;
+        totLembagaBelum += r.targetLembagaBelum;
+
+        totDeresanSudah += r.targetDeresanSudah;
+        totDeresanBelum += r.targetDeresanBelum;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="col-no">${idx + 1}</td>
+          <td class="col-halaqoh">${r.nama}</td>
+          <td class="col-kamar">${r.kamar || '-'}</td>
+          <td class="col-kls">${r.kls}</td>
+          <td class="col-num">${r.jmlSantri}</td>
+          <td class="col-masih-ziadah">${formatCellVal(r.masihZiadah)}</td>
+          <td class="col-boyong">${formatCellVal(r.santriBoyong)}</td>
+          <td class="col-khatam">${formatCellVal(r.santriKhatam)}</td>
+          <td class="col-khotimin">${formatCellVal(r.santriKhotimin)}</td>
+
+          <!-- TARGET POJOKAN -->
+          <td class="col-num">${formatCellVal(r.targetPojokanSudah)}</td>
+          <td class="col-num">${formatCellVal(r.targetPojokanBelum)}</td>
+          ${formatPercentCell(r.pctPojokan, r.targetPojokanSudah)}
+
+          <!-- TARGET LEMBAGA -->
+          <td class="col-num">${formatCellVal(r.targetLembagaSudah)}</td>
+          <td class="col-num">${formatCellVal(r.targetLembagaBelum)}</td>
+          <td class="col-num" style="background-color: #f2f2f2;"><span class="ip-box ${r.ipClass}">${r.ipSymbol}</span></td>
+          ${formatPercentCell(r.pctLembaga, r.targetLembagaSudah)}
+
+          <!-- TARGET DERESAN -->
+          <td class="col-num">${formatCellVal(r.targetDeresanSudah)}</td>
+          <td class="col-num">${formatCellVal(r.targetDeresanBelum)}</td>
+          ${formatPercentCell(r.pctDeresan, r.targetDeresanSudah)}
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Total Rangkuman Bawah
+      const avgPojokan = totSantri > 0 ? Math.round((totPojokanSudah / totSantri) * 100) : 0;
+      const avgLembaga = totSantri > 0 ? Math.round((totLembagaSudah / totSantri) * 100) : 0;
+      const avgDeresan = totSantri > 0 ? Math.round((totDeresanSudah / totSantri) * 100) : 0;
+
+      const tfoot = document.getElementById('matrixFooter');
+      tfoot.innerHTML = `
+        <tr class="footer-total">
+          <td colspan="4">TOTAL / RATA-RATA</td>
+          <td>${totSantri}</td>
+          <td>${totMasihZiadah}</td>
+          <td>${totBoyong}</td>
+          <td>${totKhatam}</td>
+          <td>${totKhotimin}</td>
+
+          <td>${totPojokanSudah}</td>
+          <td>${totPojokanBelum}</td>
+          <td class="${avgPojokan >= 70 ? 'cell-high' : 'cell-medium'}">${avgPojokan}%</td>
+
+          <td>${totLembagaSudah}</td>
+          <td>${totLembagaBelum}</td>
+          <td>-</td>
+          <td class="${avgLembaga >= 70 ? 'cell-high' : 'cell-medium'}">${avgLembaga}%</td>
+
+          <td>${totDeresanSudah}</td>
+          <td>${totDeresanBelum}</td>
+          <td class="${avgDeresan >= 70 ? 'cell-high' : 'cell-medium'}">${avgDeresan}%</td>
+        </tr>
+      `;
+    }
+
+    function exportToExcel() {
+      const table = document.getElementById('tableLaporan');
+      const bulanVal = document.getElementById('selBulan').value;
+      const namaBulan = LABEL_BULAN_MAP[bulanVal] || bulanVal;
+
+      const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap_Target_Halaqoh" });
+      XLSX.writeFile(wb, `Laporan_Rekap_Target_Tahfidh_${namaBulan}.xlsx`);
+    }
+
+    // Auto-Run saat dokumen selesai dimuat
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDataFromSupabase();
+    });
+  </script>
+</body>
+</html>

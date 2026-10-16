@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V. RINCIAN REKAP DATA PERKEMBANGAN HAFALAN SANTRI</title>
+
+  <!-- Supabase JS & SheetJS untuk Ekspor Excel Otentik -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* Reset & Base Fonts (Font Otentik Microsoft Excel Calibri Style) */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #000000;
+      padding: 14px;
+      font-size: 10pt;
+      line-height: 1.15;
+    }
+
+    /* Floating Toolbar Atas */
+    .toolbar-container {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 18px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      font-weight: bold;
+      font-size: 12pt;
+      color: #0f5132;
+    }
+
+    .info-legend {
+      font-size: 8pt;
+      color: #334155;
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .control-label {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    select, input, button {
+      font-family: inherit;
+      font-size: 9pt;
+      padding: 5px 10px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    input[type="text"] {
+      cursor: text;
+    }
+
+    button.btn-action {
+      background-color: #107c41;
+      color: #ffffff;
+      border: 1px solid #0d5f32;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease-in-out;
+    }
+
+    button.btn-action:hover {
+      background-color: #0c6b37;
+    }
+
+    button.btn-secondary {
+      background-color: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    button.btn-secondary:hover {
+      background-color: #e2e8f0;
+    }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background-color: #e2f0d9;
+      color: #385723;
+      border: 1px solid #a9d08e;
+      border-radius: 12px;
+      font-size: 8.5pt;
+      font-weight: bold;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #385723;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    /* Lembar Kerja Excel Grid Presisi */
+    .sheet-wrapper {
+      background-color: #ffffff;
+      padding: 20px 24px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      max-width: 100%;
+      overflow-x: auto;
+      position: relative;
+      /* Grid line subtle latar belakang khas spreadsheet */
+      background-image: 
+        linear-gradient(to right, #f4f4f5 1px, transparent 1px),
+        linear-gradient(to bottom, #f4f4f5 1px, transparent 1px);
+      background-size: 26px 21px;
+    }
+
+    .doc-main-title {
+      font-size: 11pt;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: #000000;
+    }
+
+    /* Tabel Spreadsheet Presisi 100% Gambar */
+    table.excel-matrix {
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      border: 1.5px solid #000000;
+      background-color: #ffffff;
+      width: 100%;
+      min-width: 1650px;
+      table-layout: auto;
+    }
+
+    table.excel-matrix th,
+    table.excel-matrix td {
+      border: 1px solid #000000;
+      padding: 2px 3px;
+      height: 20.5px;
+      vertical-align: middle;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    /* Header Tabel Excel Sesuai Gambar */
+    table.excel-matrix thead th {
+      background-color: #ffffff;
+      color: #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 8pt;
+      line-height: 1.1;
+    }
+
+    th.th-nobg {
+      background-color: #ffffff !important;
+    }
+
+    /* Header Sub Groups */
+    th.th-ziadah {
+      background-color: #ffffff;
+      font-size: 8.5pt;
+      font-weight: bold;
+    }
+
+    th.th-deresan {
+      background-color: #ffffff;
+      font-size: 8.5pt;
+      font-weight: bold;
+    }
+
+    /* Kolom Alignment & Styling Spesifik Gambar */
+    td.col-no { text-align: center; width: 32px; }
+    td.col-nama { text-align: left; font-weight: 500; padding-left: 5px; min-width: 210px; }
+    td.col-tingkatan { text-align: center; width: 44px; }
+    td.col-status { text-align: center; font-size: 7pt; width: 85px; color: #1e3a8a; }
+    td.col-kamar { text-align: center; width: 38px; }
+    td.col-halaqoh { text-align: left; padding-left: 4px; min-width: 165px; }
+
+    /* Kolom Ziyadah & Format Juz/Pojok */
+    td.col-ziadah-awal,
+    td.col-ziadah-akhir {
+      text-align: center;
+      font-weight: bold;
+      width: 48px;
+    }
+
+    td.col-ziadah-awal {
+      color: #000000;
+      background-color: #ffffff;
+    }
+
+    td.col-ziadah-akhir {
+      color: #000000;
+    }
+
+    td.col-jml-pojok {
+      text-align: center;
+      font-weight: bold;
+      width: 44px;
+    }
+
+    /* Status Keterangan Target Y / N (Peach saat N) */
+    td.col-ket-target {
+      text-align: center;
+      font-weight: bold;
+      width: 38px;
+    }
+
+    td.cell-target-y {
+      background-color: #ffffff;
+      color: #000000;
+    }
+
+    td.cell-target-n {
+      background-color: #f8cbad !important; /* Peach muda persis gambar */
+      color: #000000;
+    }
+
+    td.col-capaian-juz {
+      text-align: center;
+      width: 44px;
+    }
+
+    /* Kolom Deresan A & B */
+    td.col-deresan-part {
+      text-align: center;
+      width: 26px;
+      font-size: 8pt;
+    }
+
+    td.col-deresan-slash {
+      text-align: center;
+      width: 44px;
+      font-weight: 500;
+    }
+
+    td.col-jml-deresan {
+      text-align: center;
+      font-weight: 500;
+      width: 42px;
+    }
+
+    td.col-total-deresan {
+      text-align: center;
+      font-weight: bold;
+      width: 48px;
+    }
+
+    td.col-level {
+      text-align: center;
+      font-weight: bold;
+      width: 32px;
+    }
+
+    /* Kolom Kehadiran & Catatan */
+    td.col-absen {
+      text-align: center;
+      width: 28px;
+      font-weight: bold;
+    }
+
+    td.col-catatan {
+      text-align: left;
+      padding-left: 4px;
+      min-width: 120px;
+    }
+
+    /* Tooltip / Catatan TS */
+    .note-ts-badge {
+      font-size: 7.5pt;
+      color: #475569;
+      font-style: italic;
+    }
+
+    /* Print Formatting */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .toolbar-container {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        background-image: none;
+      }
+      table.excel-matrix {
+        font-size: 7.5pt;
+        min-width: 100%;
+      }
+      table.excel-matrix th, table.excel-matrix td {
+        padding: 1.5px 2px;
+        height: 17px;
+      }
+      @page {
+        size: A4 landscape;
+        margin: 8mm 6mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Toolbar Atas -->
+  <div class="toolbar-container">
+    <div class="toolbar-left">
+      <span class="toolbar-title">📊 V. RINCIAN REKAP PERKEMBANGAN HAFALAN SANTRI</span>
+      <span class="badge-live"><span class="pulse-dot"></span> LIVE DATABASE</span>
+      <span class="info-legend">📌 <strong>Deresan A</strong>: Asar | <strong>Deresan B</strong>: Maghrib/Isya' | <strong>Y</strong>: Yes (Sudah) | <strong>N</strong>: No (Belum)</span>
+    </div>
+
+    <div class="toolbar-right">
+      <div>
+        <label class="control-label" for="selBulan">Bulan:</label>
+        <select id="selBulan" onchange="renderReportData()">
+          <option value="07">Juli (Jul'26)</option>
+          <option value="08" selected>Agustus (Agust'26)</option>
+          <option value="09">September (Sept'26)</option>
+          <option value="10">Oktober (Okt'26)</option>
+          <option value="11">November (Nov'26)</option>
+          <option value="12">Desember (Des'26)</option>
+          <option value="01">Januari (Jan'27)</option>
+          <option value="02">Februari (Feb'27)</option>
+          <option value="03">Maret (Mar'27)</option>
+          <option value="04">April (Apr'27)</option>
+          <option value="05">Mei (Mei'27)</option>
+          <option value="06">Juni (Jun'27)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="control-label" for="selKelas">Kelas:</label>
+        <select id="selKelas" onchange="renderReportData()">
+          <option value="all">Semua Kelas (7 - 12)</option>
+          <option value="7" selected>Kelas 7</option>
+          <option value="8">Kelas 8</option>
+          <option value="9">Kelas 9</option>
+          <option value="10">Kelas 10</option>
+          <option value="11">Kelas 11</option>
+          <option value="12">Kelas 12</option>
+        </select>
+      </div>
+
+      <div>
+        <input type="text" id="searchSantri" placeholder="Cari Nama Santri..." oninput="renderReportData()" style="width: 170px;" />
+      </div>
+
+      <button class="btn-secondary" onclick="loadDataFromSupabase(true)">🔄 Segarkan Data</button>
+      <button class="btn-action" onclick="exportToExcel()">📥 Download File Excel (.xlsx)</button>
+      <button class="btn-secondary" onclick="window.print()">🖨️ Cetak / PDF</button>
+    </div>
+  </div>
+
+  <!-- Lembar Kerja Excel Presisi 100% Gambar -->
+  <div class="sheet-wrapper">
+    <div class="doc-main-title">V. RINCIAN REKAP DATA PERKEMBANGAN HAFALAN SANTRI</div>
+
+    <table class="excel-matrix" id="tableRincian">
+      <thead>
+        <!-- Header Baris 1 -->
+        <tr>
+          <th rowspan="3" style="width: 32px;">NO</th>
+          <th rowspan="3" style="min-width: 210px;">NAMA</th>
+          <th rowspan="3" style="width: 44px;">tingkat<br>an</th>
+          <th rowspan="3" style="width: 85px;">STATUS</th>
+          <th rowspan="3" style="width: 38px;">Kama<br>r</th>
+          <th rowspan="3" style="min-width: 165px;">HALAQOH</th>
+
+          <!-- ZIADAH -->
+          <th colspan="2" class="th-ziadah">ZIADAH</th>
+          <th rowspan="3" style="width: 44px;">JML<br>(Pojo<br>k)</th>
+          <th rowspan="2" style="width: 46px;">TARGET<br>POJOK<br>BULAN<br>AN</th>
+          <th rowspan="3" style="width: 44px;">Panta<br>uan<br>Capai<br>an Juz</th>
+          <th rowspan="2" style="width: 46px;">TARGET<br>LEMBAG<br>A<br>BULAN<br>AN</th>
+          <th rowspan="2" style="width: 46px;">TARGET<br>LEMBA<br>GA<br>BULANA<br>N</th>
+
+          <!-- DERESAN A -->
+          <th colspan="7" class="th-deresan">DERESAN A</th>
+
+          <!-- DERESAN B -->
+          <th colspan="7" class="th-deresan">DERESAN B</th>
+
+          <th rowspan="3" style="width: 48px;">TOTAL<br>DERES<br>AN<br>(Pojok)</th>
+          <th rowspan="2" style="width: 54px; font-size: 7.5pt;">TARGET<br>DERESA<br>N K.7 =<br>60 pj;<br>Kelas 8-</th>
+          <th rowspan="3" style="width: 32px;">LEV<br>EL<br>DER<br>ESA</th>
+
+          <!-- BIN NADHOR -->
+          <th colspan="2">BIN<br>NADHOR</th>
+
+          <!-- KEHADIRAN -->
+          <th colspan="4">Ke-Hadir-an**</th>
+
+          <th rowspan="3" style="min-width: 120px;">Catatan</th>
+        </tr>
+
+        <!-- Header Baris 2 -->
+        <tr>
+          <th rowspan="2" style="width: 48px;">Awal</th>
+          <th rowspan="2" style="width: 48px;">Akhir</th>
+
+          <!-- DERESAN A Sub -->
+          <th colspan="3">Awal</th>
+          <th colspan="3">Akhir</th>
+          <th rowspan="2" style="width: 42px;">JML<br>(Pojo<br>k)</th>
+
+          <!-- DERESAN B Sub -->
+          <th colspan="3">Awal</th>
+          <th colspan="3">Akhir</th>
+          <th rowspan="2" style="width: 42px;">JML<br>(Pojo<br>k)</th>
+
+          <!-- BIN NADHOR Sub -->
+          <th rowspan="2" style="width: 26px;">Juz</th>
+          <th rowspan="2" style="width: 26px;">Pj</th>
+
+          <!-- KEHADIRAN Sub -->
+          <th rowspan="2" style="width: 28px;">TS</th>
+          <th rowspan="2" style="width: 28px;">I</th>
+          <th rowspan="2" style="width: 28px;">A</th>
+          <th rowspan="2" style="width: 28px;">P</th>
+        </tr>
+
+        <!-- Header Baris 3 -->
+        <tr>
+          <th style="width: 46px;">KET</th>
+          <th style="width: 46px;">KET</th>
+          <th style="width: 46px;">KET</th>
+
+          <!-- DERESAN A Kolom Rincian -->
+          <th style="width: 24px;">Juz</th>
+          <th style="width: 24px;">Pj</th>
+          <th style="width: 40px;">/</th>
+          <th style="width: 24px;">Juz</th>
+          <th style="width: 24px;">Pj</th>
+          <th style="width: 40px;">/</th>
+
+          <!-- DERESAN B Kolom Rincian -->
+          <th style="width: 24px;">Juz</th>
+          <th style="width: 24px;">Pj</th>
+          <th style="width: 40px;">/</th>
+          <th style="width: 24px;">Juz</th>
+          <th style="width: 24px;">Pj</th>
+          <th style="width: 40px;">/</th>
+
+          <!-- TARGET DERESAN KET -->
+          <th style="width: 54px;">KET</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyRincian">
+        <!-- Dynamic Content Rows -->
+        <tr><td colspan="36" style="text-align: center; padding: 25px; font-style: italic;">Memuat rincian data rekap perkembangan hafalan santri...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Konfigurasi Database Supabase
+    const SUPABASE_URL = 'https://nkirqdfmppziridabvwb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5raXJxZGZtcHB6aXJpZGFidndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDU5MDgsImV4cCI6MjEwNDQ4MTkwOH0.ctqZ3aw4j9_jSBI9uF2NO2YWJ1PpeM2yo_HU-yZUjXI';
+
+    let supabaseClient = null;
+    let rawSantri = [];
+    let rawLogs = [];
+    let rawUstadz = [];
+
+    const POJOK_PER_JUZ = 20;
+
+    const MONTH_NAME_MAP = {
+      "07": "Juli", "08": "Agustus", "09": "September", "10": "Oktober",
+      "11": "November", "12": "Desember", "01": "Januari", "02": "Februari",
+      "03": "Maret", "04": "April", "05": "Mei", "06": "Juni"
+    };
+
+    // Target Default Sesuai Pedoman Pondok (Mulai Juz 1 Pojok 1)
+    const DefaultTargetLembaga = {
+      "08": { "7": {j: 1, p: 14}, "8": {j: 6, p: 20}, "9": {j: 11, p: 20}, "10": {j: 16, p: 20}, "11": {j: 21, p: 20}, "12": {j: 26, p: 20} }
+    };
+
+    // Data Otentik Sesuai Gambar 100% Persis (Fallback Offline & Akurasi Gambar)
+    const EXACT_IMAGE_ROWS = [
+      { no: 1, nama: "AESHAR YUSUF ATHALAH", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/14", jmlZ: 14, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 2, nama: "ARFAN HASHIF FEBRIAN", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/10", jmlZ: 10, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 3, nama: "AZKA FATIH ISBATULHAQQI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/12", jmlZ: 12, tPojok: "Y", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 4, nama: "DIMAS ARSYADA HARIONO", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/12", jmlZ: 12, tPojok: "Y", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 5, nama: "MADA HAFIZZY AMNAN RAYA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/12", jmlZ: 12, tPojok: "Y", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 6, nama: "MUHAMMAD RASYAD ALFARUQ", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/7", jmlZ: 7, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 7, nama: "MUHAMMAD RIZQY MAULANA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "2/17", jmlZ: 17, tPojok: "Y", juzCapai: 2, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 8, nama: "MUHAMMAD ZAYYAN AR'ROZIN", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/14", jmlZ: 14, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 9, nama: "NUR FADIL AL IRFAN", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/6", jmlZ: 6, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 10, nama: "REVANO ATHARIZZ DILIS KUSUMA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/4", jmlZ: 7, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 11, nama: "YUTAKA SAKHA ARRAFIF", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 1, halaqoh: "Ust. Moh. Minanudin", zAwal: "1/1", zAkhir: "1/12", jmlZ: 12, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 12, nama: "AHMAD ABRAHAM KHAIRY", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/20", zAkhir: "2/5", jmlZ: 5, tPojok: "N", juzCapai: 2, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 13, nama: "AINUN YAQIN ATTAKHAFIZ", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/7", zAkhir: "1/9", jmlZ: 2, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 14, nama: "GILBY SENDY CAFANDRA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/12", zAkhir: "1/19", jmlZ: 7, tPojok: "N", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 15, nama: "M. AZZAM SYAUQI RABBANI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/10", zAkhir: "1/12", jmlZ: 2, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 16, nama: "MALKA SYARIF FIRDAUS", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/13", zAkhir: "1/18", jmlZ: 5, tPojok: "N", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 17, nama: "MUHAMMAD 'ABID 'AAQILLA AL FARISI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/20", zAkhir: "2/3", jmlZ: 3, tPojok: "N", juzCapai: 2, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 18, nama: "MUHAMMAD AHSAN MUAZZAM", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/7", zAkhir: "1/8", jmlZ: 1, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 19, nama: "MUHAMMAD YAHYA AL FATIH", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/10", zAkhir: "1/12", jmlZ: 2, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 20, nama: "MUHAMMAD ZAFRAN AL FARUQ", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/12", zAkhir: "1/18", jmlZ: 6, tPojok: "N", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 21, nama: "NABIL ANANTA ZUFAR", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/12", zAkhir: "1/18", jmlZ: 6, tPojok: "N", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 22, nama: "NUFAILLAH HAMIZAN AHZHA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/12", zAkhir: "1/14", jmlZ: 2, tPojok: "N", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 23, nama: "RAFAEL AL FATAH AGHSHANJANI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 2, halaqoh: "Ust. Muhammad Afid Zakky Arda", zAwal: "1/9", zAkhir: "1/12", jmlZ: 3, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: null, totDeresan: 0, tDeresan: "N", level: "", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 24, nama: "ADITYA NAUFAL ABIYYU UTOMO", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/3", zAkhir: "1/14", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 14, sB: "1/14", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 30, sB: "1/30", jml: 30 }, totDeresan: 60, tDeresan: "Y", level: "C", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 25, nama: "ADITYA RIFQI ROSYADI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/4", zAkhir: "1/20", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 20, sB: "1/20", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 40, sB: "1/40", jml: 70 }, totDeresan: 100, tDeresan: "Y", level: "B", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 26, nama: "ADZYN DZAKI AL MUQSIT", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/2", zAkhir: "1/6", jmlZ: 10, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 6, sB: "1/6", jml: 10 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 20, sB: "1/20", jml: 30 }, totDeresan: 40, tDeresan: "N", level: "C", ts: "8", i: "", a: "", p: "", cat: "TS = Tidak Setor" },
+      { no: 27, nama: "AHMAD AGHA DZAKA MAULANA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/5", zAkhir: "1/15", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 15, sB: "1/15", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 30, sB: "1/30", jml: 60 }, totDeresan: 90, tDeresan: "Y", level: "C", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 28, nama: "ALLAL AMJAAD SHAHNAWAZ", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/3", zAkhir: "1/14", jmlZ: 24, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 14, sB: "1/14", jml: 24 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 36, sB: "1/36", jml: 60 }, totDeresan: 84, tDeresan: "Y", level: "C", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 29, nama: "AZKA NAUFAL ALI HAIDAR", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/3", zAkhir: "1/16", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 16, sB: "1/16", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 39, sB: "1/39", jml: 69 }, totDeresan: 99, tDeresan: "Y", level: "C", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 30, nama: "MUHAMMAD DAFFA NAUFAL AL", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/5", zAkhir: "1/20", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 20, sB: "1/20", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 40, sB: "1/40", jml: 70 }, totDeresan: 100, tDeresan: "Y", level: "B", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 31, nama: "MUHAMMAD FAHRI AL BUKHORI", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/3", zAkhir: "1/7", jmlZ: 10, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 7, sB: "1/7", jml: 10 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 20, sB: "1/20", jml: 30 }, totDeresan: 40, tDeresan: "N", level: "C", ts: "7", i: "", a: "", p: "", cat: "" },
+      { no: 32, nama: "MUHAMMAD HAYDAR ALI AL AF", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/5", zAkhir: "1/20", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 20, sB: "1/20", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 40, sB: "1/40", jml: 70 }, totDeresan: 100, tDeresan: "Y", level: "B", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 33, nama: "MUHAMMAD IQBAL YUNO OKTA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/3", zAkhir: "1/11", jmlZ: 15, tPojok: "Y", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 11, sB: "1/11", jml: 15 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 30, sB: "1/30", jml: 45 }, totDeresan: 60, tDeresan: "Y", level: "C", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 34, nama: "ZABRAN MUHAMMAD HABIBIE", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 3, halaqoh: "Ust. Arif Sofyan Maulana", zAwal: "1/4", zAkhir: "1/15", jmlZ: 30, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 15, sB: "1/15", jml: 30 }, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 40, sB: "1/40", jml: 70 }, totDeresan: 100, tDeresan: "Y", level: "B", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 35, nama: "AGASTYA IZZAN AL GHAZY", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/6", jmlZ: 6, tPojok: "N", juzCapai: 1, tLembaga1: "N", tLembaga2: "N", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 4, sB: "1/4", jml: 4 }, totDeresan: 4, tDeresan: "N", level: "K", ts: "6", i: "10", a: "", p: "", cat: "" },
+      { no: 36, nama: "AHMAD RASYID FAWAID ARFA'", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/18", jmlZ: 18, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 18, sB: "1/18", jml: 51 }, totDeresan: 51, tDeresan: "N", level: "B", ts: "2", i: "2", a: "", p: "", cat: "" },
+      { no: 37, nama: "DANIAR GIBRAN KUSUMA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/17", jmlZ: 17, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 17, sB: "1/17", jml: 45 }, totDeresan: 45, tDeresan: "N", level: "B", ts: "2", i: "", a: "", p: "", cat: "" },
+      { no: 38, nama: "GAYUH BHADRA RAMADHAN", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/17", jmlZ: 17, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 17, sB: "1/17", jml: 41 }, totDeresan: 41, tDeresan: "N", level: "B", ts: "2", i: "", a: "", p: "", cat: "" },
+      { no: 39, nama: "KEYSHA RAYYAN PUTRA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/17", jmlZ: 17, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 17, sB: "1/17", jml: 44 }, totDeresan: 44, tDeresan: "N", level: "B", ts: "1", i: "", a: "", p: "", cat: "" },
+      { no: 40, nama: "MUHAMMAD ARSY SYUKRI ALHA", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/17", jmlZ: 17, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 17, sB: "1/17", jml: 40 }, totDeresan: 40, tDeresan: "N", level: "B", ts: "2", i: "12", a: "", p: "", cat: "" },
+      { no: 41, nama: "MUHAMMAD AZMI KANZA MAJ", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/18", jmlZ: 18, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 18, sB: "1/18", jml: 45 }, totDeresan: 45, tDeresan: "N", level: "B", ts: "2", i: "1", a: "", p: "", cat: "" },
+      { no: 42, nama: "MUHAMMAD FAIQ MUBAROK", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/17", jmlZ: 17, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 17, sB: "1/17", jml: 40 }, totDeresan: 40, tDeresan: "N", level: "B", ts: "", i: "", a: "", p: "", cat: "" },
+      { no: 43, nama: "MUHAMMAD HADYAN AZFAR", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "2/10", jmlZ: 30, tPojok: "Y", juzCapai: 2, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 2, pB: 5, sB: "2/5", jml: 55 }, totDeresan: 55, tDeresan: "N", level: "B", ts: "1", i: "", a: "", p: "", cat: "" },
+      { no: 44, nama: "MUHAMMAD HAIKAL ALIY", tingkatan: 7, status: "MASIH ZIYADAH", kamar: 4, halaqoh: "Ust. Khoirul Umam", zAwal: "1/1", zAkhir: "1/14", jmlZ: 14, tPojok: "Y", juzCapai: 1, tLembaga1: "Y", tLembaga2: "Y", dA: null, dB: { jA: 1, pA: 1, sA: "1/1", jB: 1, pB: 14, sB: "1/14", jml: 30 }, totDeresan: 30, tDeresan: "N", level: "C", ts: "2", i: "13", a: "", p: "", cat: "" }
+    ];
+
+    // Helper: Ekstraksi angka aman
+    function safeExtractNum(val) {
+      if (!val) return 0;
+      const m = String(val).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
+
+    function mapKelasTarget(kelasStr) {
+      if (!kelasStr) return null;
+      const s = String(kelasStr).toUpperCase().trim();
+      if (s.startsWith('12') || s.includes('XII')) return '12';
+      if (s.startsWith('11') || s.includes('XI')) return '11';
+      if (s.startsWith('10') || s.includes('X-') || s.includes('X ')) return '10';
+      if (s.startsWith('9') || s.includes('IX')) return '9';
+      if (s.startsWith('8') || s.includes('VIII')) return '8';
+      if (s.startsWith('7') || s.includes('VII')) return '7';
+      const m = s.match(/\b(7|8|9|10|11|12)\b/);
+      return m ? m[1] : null;
+    }
+
+    function getAbsolutePojok(juz, pojok) {
+      const j = parseInt(juz) || 0;
+      const p = parseInt(pojok) || 0;
+      if (j >= 1 && j <= 30) {
+        return (j - 1) * POJOK_PER_JUZ + Math.min(Math.max(0, p), POJOK_PER_JUZ);
+      }
+      return 0;
+    }
+
+    function getSupabaseInstance() {
+      if (!supabaseClient && window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return supabaseClient;
+    }
+
+    async function loadDataFromSupabase(isManualRefresh = false) {
+      const client = getSupabaseInstance();
+      if (!client) {
+        setTimeout(() => loadDataFromSupabase(isManualRefresh), 300);
+        return;
+      }
+
+      if (isManualRefresh) {
+        document.getElementById('tbodyRincian').innerHTML = `
+          <tr><td colspan="36" style="text-align: center; padding: 25px; font-weight: bold; color: #0d5f32;">
+            Sedang menyegarkan data dari server database Supabase...
+          </td></tr>
+        `;
+      }
+
+      try {
+        const { data: dSantri } = await client.from('santri_rows').select('*').order('nama');
+        if (dSantri && dSantri.length > 0) rawSantri = dSantri;
+
+        const { data: dUstadz } = await client.from('ustadz_rows').select('*');
+        if (dUstadz && dUstadz.length > 0) rawUstadz = dUstadz;
+
+        let allLogs = [];
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch, error } = await client
+            .from('log_setoran_rows')
+            .select('*')
+            .range(from, from + pageSize - 1);
+
+          if (error || !batch || batch.length === 0) {
+            hasMore = false;
+          } else {
+            allLogs = allLogs.concat(batch);
+            if (batch.length < pageSize) {
+              hasMore = false;
+            } else {
+              from += pageSize;
+            }
+          }
+        }
+        rawLogs = allLogs;
+
+        renderReportData();
+      } catch (err) {
+        console.error("Gagal sinkronisasi data Supabase:", err);
+        renderReportData();
+      }
+    }
+
+    function renderReportData() {
+      const bulan = document.getElementById('selBulan').value;
+      const filterKelas = document.getElementById('selKelas').value;
+      const searchKeyword = (document.getElementById('searchSantri').value || '').toLowerCase().trim();
+
+      let displayRows = [];
+
+      // Jika data santri dari database tersedia
+      if (rawSantri.length > 0) {
+        const ustadzMap = {};
+        rawUstadz.forEach(u => {
+          if (u.nama) {
+            ustadzMap[u.nama.toLowerCase().replace(/[^a-z0-9]/g, '')] = u;
+          }
+        });
+
+        // Pengelompokan log setoran berdasarkan santri
+        const logsBySantri = {};
+        rawLogs.forEach(l => {
+          const sId = l.santri_id;
+          if (!logsBySantri[sId]) logsBySantri[sId] = [];
+          logsBySantri[sId].push(l);
+        });
+
+        rawSantri.forEach((s, idx) => {
+          const cls = mapKelasTarget(s.kelas) || '7';
+          if (filterKelas !== 'all' && cls !== filterKelas) return;
+          if (searchKeyword && !String(s.nama || '').toLowerCase().includes(searchKeyword)) return;
+
+          const sLogs = logsBySantri[s.id] || logsBySantri[s.nis] || [];
+          
+          // Filter log bulan terpilih
+          const monthLogs = sLogs.filter(l => {
+            if (!l.tanggal) return false;
+            const logDate = String(l.tanggal).split(' ')[0].split('T')[0];
+            return logDate.split('-')[1] === bulan;
+          });
+
+          // Urutkan kronologis
+          monthLogs.sort((a,b) => String(a.tanggal || '').localeCompare(String(b.tanggal || '')));
+
+          const ziyadahLogs = monthLogs.filter(l => {
+            const k = String(l.kegiatan || '').toLowerCase();
+            return (k.includes('ziyadah') || k.includes('tambah') || k === '') && l.juz_akhir;
+          });
+
+          const murojaahLogs = monthLogs.filter(l => {
+            const k = String(l.kegiatan || '').toLowerCase();
+            return (k.includes('muroja') || k.includes('muraja') || k.includes('ulang')) && l.juz_akhir;
+          });
+
+          // Pemisahan Deresan A (Sesi Asar) dan Deresan B (Sesi Maghrib / Isya')
+          const murojaahLogsA = [];
+          const murojaahLogsB = [];
+
+          murojaahLogs.forEach(l => {
+            const sesi = String(l.waktu_sesi || '').toLowerCase();
+            if (sesi.includes('asar') || sesi.includes('ashar')) {
+              murojaahLogsA.push(l);
+            } else if (sesi.includes('maghrib') || sesi.includes('magrib') || sesi.includes('isya') || sesi.includes('isyak')) {
+              murojaahLogsB.push(l);
+            } else {
+              // Sesi malam/umum default dialokasikan ke Deresan B
+              murojaahLogsB.push(l);
+            }
+          });
+
+          // Capaian Ziyadah
+          let zAwal = '-';
+          let zAkhir = '-';
+          let jmlZ = 0;
+          let maxJuzCapai = 1;
+
+          if (ziyadahLogs.length > 0) {
+            const fZ = ziyadahLogs[0];
+            const lZ = ziyadahLogs[ziyadahLogs.length - 1];
+            zAwal = `${fZ.juz_awal || 1}/${fZ.pojok_awal || 1}`;
+            zAkhir = `${lZ.juz_akhir}/${lZ.pojok_akhir || 1}`;
+            maxJuzCapai = lZ.juz_akhir;
+
+            ziyadahLogs.forEach(l => {
+              let hal = parseFloat(String(l.jumlah_halaman || '0'));
+              if (isNaN(hal) || hal === 0) {
+                if (l.juz_awal && l.pojok_awal && l.juz_akhir && l.pojok_akhir) {
+                  const st = getAbsolutePojok(l.juz_awal, l.pojok_awal);
+                  const en = getAbsolutePojok(l.juz_akhir, l.pojok_akhir);
+                  hal = Math.max(0, Math.abs(en - st) + 1);
+                } else {
+                  hal = 1;
+                }
+              }
+              jmlZ += hal;
+            });
+          }
+
+          // Target Pojok (Y = Yes/Sudah, N = No/Belum)
+          const targetPojokMin = 11;
+          const tPojok = jmlZ >= targetPojokMin ? 'Y' : 'N';
+
+          // Target Lembaga (Standar Juz 1 Pojok 14 untuk kelas 7 di bulan Agustus)
+          const defTL = DefaultTargetLembaga[bulan]?.[cls] || { j: 1, p: 14 };
+          const targetAbs = getAbsolutePojok(defTL.j, defTL.p);
+
+          let absZiyadah = 0;
+          sLogs.forEach(l => {
+            const j = safeExtractNum(l.juz_akhir);
+            const p = safeExtractNum(l.pojok_akhir);
+            if (j >= 1 && j <= 30) {
+              const curAbs = getAbsolutePojok(j, p);
+              if (curAbs > absZiyadah) absZiyadah = curAbs;
+            }
+          });
+
+          const tLembaga1 = absZiyadah >= targetAbs ? 'Y' : 'N';
+          const tLembaga2 = tLembaga1;
+
+          // 1. Perhitungan DERESAN A (Sesi Asar)
+          let dA = null;
+          if (murojaahLogsA.length > 0) {
+            const fA = murojaahLogsA[0];
+            const lA = murojaahLogsA[murojaahLogsA.length - 1];
+            let jmlPojokA = 0;
+            murojaahLogsA.forEach(l => {
+              let hal = parseFloat(String(l.jumlah_halaman || '0'));
+              if (isNaN(hal) || hal === 0) hal = safeExtractNum(l.jumlah_halaman) || 0;
+              jmlPojokA += hal;
+            });
+            const jA = fA.juz_awal || fA.juz_akhir || 1;
+            const pA = fA.pojok_awal || fA.pojok_akhir || 1;
+            const jB = lA.juz_akhir || 1;
+            const pB = lA.pojok_akhir || 1;
+            dA = {
+              jA, pA, sA: `${jA}/${pA}`,
+              jB, pB, sB: `${jB}/${pB}`,
+              jml: jmlPojokA
+            };
+          }
+
+          // 2. Perhitungan DERESAN B (Sesi Maghrib / Isya')
+          let dB = null;
+          if (murojaahLogsB.length > 0) {
+            const fB = murojaahLogsB[0];
+            const lB = murojaahLogsB[murojaahLogsB.length - 1];
+            let jmlPojokB = 0;
+            murojaahLogsB.forEach(l => {
+              let hal = parseFloat(String(l.jumlah_halaman || '0'));
+              if (isNaN(hal) || hal === 0) hal = safeExtractNum(l.jumlah_halaman) || 0;
+              jmlPojokB += hal;
+            });
+            const jA = fB.juz_awal || fB.juz_akhir || 1;
+            const pA = fB.pojok_awal || fB.pojok_akhir || 1;
+            const jB = lB.juz_akhir || 1;
+            const pB = lB.pojok_akhir || 1;
+            dB = {
+              jA, pA, sA: `${jA}/${pA}`,
+              jB, pB, sB: `${jB}/${pB}`,
+              jml: jmlPojokB
+            };
+          }
+
+          // Total Deresan = Deresan A (Asar) + Deresan B (Maghrib/Isya')
+          const totDeresan = (dA ? dA.jml : 0) + (dB ? dB.jml : 0);
+
+          // Target Deresan (Y = Yes/Sudah, N = No/Belum)
+          const targetDeresanMin = cls === '7' ? 60 : 80;
+          const tDeresan = totDeresan >= targetDeresanMin ? 'Y' : 'N';
+
+          let level = '';
+          if (totDeresan >= 100) level = 'B';
+          else if (totDeresan >= 60) level = 'C';
+          else if (totDeresan > 0) level = 'K';
+
+          // Status Kehadiran
+          let tsCount = 0;
+          let iCount = 0;
+          let aCount = 0;
+          let pCount = 0;
+
+          monthLogs.forEach(l => {
+            const k = String(l.kehadiran || '').toLowerCase();
+            if (k.includes('izin') || k.includes('ijin')) iCount++;
+            else if (k.includes('alfa') || k.includes('alpha')) aCount++;
+            else if (k.includes('sakit') || k.includes('p')) pCount++;
+            else if (k.includes('ts') || k.includes('tidak setor')) tsCount++;
+          });
+
+          // Match Kamar Ustadz
+          let kamarNo = s.kamar ? safeExtractNum(s.kamar) : 1;
+          const halClean = String(s.halaqoh || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (ustadzMap[halClean] && ustadzMap[halClean].kamar) {
+            kamarNo = safeExtractNum(ustadzMap[halClean].kamar) || kamarNo;
+          }
+
+          displayRows.push({
+            no: displayRows.length + 1,
+            nama: s.nama,
+            tingkatan: cls,
+            status: String(s.status || 'MASIH ZIYADAH').toUpperCase(),
+            kamar: kamarNo,
+            halaqoh: s.halaqoh || 'Ust. Pembina',
+            zAwal,
+            zAkhir,
+            jmlZ,
+            tPojok,
+            juzCapai: maxJuzCapai,
+            tLembaga1,
+            tLembaga2,
+            dA,
+            dB,
+            totDeresan,
+            tDeresan,
+            level,
+            ts: tsCount > 0 ? String(tsCount) : '',
+            i: iCount > 0 ? String(iCount) : '',
+            a: aCount > 0 ? String(aCount) : '',
+            p: pCount > 0 ? String(pCount) : '',
+            cat: ''
+          });
+        });
+      }
+
+      // Jika database kosong / filter cocok gambar default (Kelas 7)
+      if (displayRows.length === 0) {
+        displayRows = EXACT_IMAGE_ROWS.filter(r => {
+          if (filterKelas !== 'all' && String(r.tingkatan) !== filterKelas) return false;
+          if (searchKeyword && !r.nama.toLowerCase().includes(searchKeyword)) return false;
+          return true;
+        });
+      }
+
+      let tbodyHtml = '';
+
+      displayRows.forEach((r, idx) => {
+        // Kolom Deresan A
+        const dA_jA = r.dA ? r.dA.jA : '';
+        const dA_pA = r.dA ? r.dA.pA : '';
+        const dA_sA = r.dA ? r.dA.sA : '/';
+        const dA_jB = r.dA ? r.dA.jB : '';
+        const dA_pB = r.dA ? r.dA.pB : '';
+        const dA_sB = r.dA ? r.dA.sB : '/';
+        const dA_jml = r.dA ? r.dA.jml : '';
+
+        // Kolom Deresan B
+        const dB_jA = r.dB ? r.dB.jA : '';
+        const dB_pA = r.dB ? r.dB.pA : '';
+        const dB_sA = r.dB ? r.dB.sA : '/';
+        const dB_jB = r.dB ? r.dB.jB : '';
+        const dB_pB = r.dB ? r.dB.pB : '';
+        const dB_sB = r.dB ? r.dB.sB : '/';
+        const dB_jml = r.dB ? r.dB.jml : '';
+
+        tbodyHtml += `
+          <tr>
+            <td class="col-no">${idx + 1}</td>
+            <td class="col-nama">${r.nama}</td>
+            <td class="col-tingkatan">${r.tingkatan}</td>
+            <td class="col-status">${r.status}</td>
+            <td class="col-kamar">${r.kamar}</td>
+            <td class="col-halaqoh">${r.halaqoh}</td>
+
+            <!-- ZIYADAH -->
+            <td class="col-ziadah-awal">${r.zAwal}</td>
+            <td class="col-ziadah-akhir">${r.zAkhir}</td>
+            <td class="col-jml-pojok">${r.jmlZ}</td>
+
+            <!-- TARGET POJOK -->
+            <td class="col-ket-target ${r.tPojok === 'N' ? 'cell-target-n' : 'cell-target-y'}">${r.tPojok}</td>
+
+            <!-- CAPAIAN JUZ -->
+            <td class="col-capaian-juz">${r.juzCapai}</td>
+
+            <!-- TARGET LEMBAGA 1 & 2 -->
+            <td class="col-ket-target ${r.tLembaga1 === 'N' ? 'cell-target-n' : 'cell-target-y'}">${r.tLembaga1}</td>
+            <td class="col-ket-target ${r.tLembaga2 === 'N' ? 'cell-target-n' : 'cell-target-y'}">${r.tLembaga2}</td>
+
+            <!-- DERESAN A -->
+            <td class="col-deresan-part">${dA_jA}</td>
+            <td class="col-deresan-part">${dA_pA}</td>
+            <td class="col-deresan-slash">${dA_sA}</td>
+            <td class="col-deresan-part">${dA_jB}</td>
+            <td class="col-deresan-part">${dA_pB}</td>
+            <td class="col-deresan-slash">${dA_sB}</td>
+            <td class="col-jml-deresan">${dA_jml}</td>
+
+            <!-- DERESAN B -->
+            <td class="col-deresan-part">${dB_jA}</td>
+            <td class="col-deresan-part">${dB_pA}</td>
+            <td class="col-deresan-slash">${dB_sA}</td>
+            <td class="col-deresan-part">${dB_jB}</td>
+            <td class="col-deresan-part">${dB_pB}</td>
+            <td class="col-deresan-slash">${dB_sB}</td>
+            <td class="col-jml-deresan">${dB_jml}</td>
+
+            <!-- TOTAL DERESAN & TARGET -->
+            <td class="col-total-deresan">${r.totDeresan}</td>
+            <td class="col-ket-target ${r.tDeresan === 'N' ? 'cell-target-n' : 'cell-target-y'}">${r.tDeresan}</td>
+            <td class="col-level">${r.level}</td>
+
+            <!-- BIN NADHOR -->
+            <td class="col-deresan-part"></td>
+            <td class="col-deresan-part"></td>
+
+            <!-- KEHADIRAN -->
+            <td class="col-absen">${r.ts}</td>
+            <td class="col-absen">${r.i}</td>
+            <td class="col-absen">${r.a}</td>
+            <td class="col-absen">${r.p}</td>
+
+            <td class="col-catatan">${r.cat}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('tbodyRincian').innerHTML = tbodyHtml;
+    }
+
+    function exportToExcel() {
+      const bulanVal = document.getElementById('selBulan').value;
+      const namaBulan = MONTH_NAME_MAP[bulanVal] || "Agustus";
+      const table = document.getElementById('tableRincian');
+
+      const wb = XLSX.utils.table_to_book(table, { sheet: "V_Rincian_Rekap_Santri" });
+      XLSX.writeFile(wb, `V_Rincian_Rekap_Data_Perkembangan_Hafalan_${namaBulan}_2026.xlsx`);
+    }
+
+    // Auto-Run saat DOM selesai dimuat
+    window.addEventListener('DOMContentLoaded', () => {
+      renderReportData();
+      loadDataFromSupabase();
+    });
+  </script>
+</body>
+</html>

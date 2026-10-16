@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>II. PANTAUAN PERKEMBANGAN HAFALAN SANTRI</title>
+
+  <!-- Supabase JS & SheetJS untuk Ekspor Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* Reset & Base Fonts (Font Asli Microsoft Excel Calibri Style) */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      background-color: #f1f5f9;
+      color: #000000;
+      padding: 16px;
+      font-size: 11pt;
+      line-height: 1.25;
+    }
+
+    /* Floating Toolbar Atas */
+    .toolbar-container {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      font-weight: bold;
+      font-size: 13pt;
+      color: #0f5132;
+    }
+
+    .control-label {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    select, button {
+      font-family: inherit;
+      font-size: 9.5pt;
+      padding: 6px 12px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    button.btn-action {
+      background-color: #107c41;
+      color: #ffffff;
+      border: 1px solid #0d5f32;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease-in-out;
+    }
+
+    button.btn-action:hover {
+      background-color: #0c6b37;
+    }
+
+    button.btn-secondary {
+      background-color: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    button.btn-secondary:hover {
+      background-color: #e2e8f0;
+    }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background-color: #e2f0d9;
+      color: #385723;
+      border: 1px solid #a9d08e;
+      border-radius: 12px;
+      font-size: 8.5pt;
+      font-weight: bold;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #385723;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    /* Container Lembar Kerja Excel Grid Otentik */
+    .sheet-wrapper {
+      background-color: #ffffff;
+      padding: 32px 36px;
+      border: 1px solid #d4d4d8;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      max-width: 960px;
+      margin: 0 auto;
+      overflow-x: auto;
+      position: relative;
+      /* Grid line subtle latar belakang khas spreadsheet */
+      background-image: 
+        linear-gradient(to right, #f4f4f5 1px, transparent 1px),
+        linear-gradient(to bottom, #f4f4f5 1px, transparent 1px);
+      background-size: 26px 22px;
+    }
+
+    /* Watermark Excel Page 1 & Page 2 */
+    .page-watermark {
+      position: absolute;
+      font-size: 80pt;
+      font-weight: 900;
+      color: rgba(100, 116, 139, 0.22);
+      pointer-events: none;
+      user-select: none;
+      z-index: 1;
+      left: 50%;
+      transform: translateX(-50%);
+      letter-spacing: 2px;
+    }
+
+    .watermark-p1 {
+      top: 140px;
+    }
+
+    .watermark-p2 {
+      top: 560px;
+    }
+
+    /* Judul Utama */
+    .doc-main-title {
+      font-size: 11.5pt;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .section-title {
+      font-size: 10.5pt;
+      font-weight: bold;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    /* Gaya Tabel Spreadsheet 100% Presisi */
+    table.excel-table {
+      border-collapse: collapse;
+      font-size: 10pt;
+      border: 1.5px solid #000000;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 2;
+      background-color: #ffffff;
+    }
+
+    table.excel-table th, 
+    table.excel-table td {
+      border: 1px solid #000000;
+      padding: 3px 8px;
+      height: 23px;
+      vertical-align: middle;
+    }
+
+    /* Header Tabel Peach/Orange */
+    th.th-orange {
+      background-color: #f8cbad !important;
+      color: #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 9.5pt;
+    }
+
+    /* Kolom Angka & Teks */
+    td.col-label {
+      text-align: left;
+      font-style: italic;
+      font-weight: 500;
+      min-width: 105px;
+    }
+
+    td.col-num {
+      text-align: center;
+      min-width: 60px;
+    }
+
+    td.col-total {
+      text-align: center;
+      font-weight: bold;
+      min-width: 65px;
+    }
+
+    td.col-pct {
+      text-align: center;
+      min-width: 78px;
+    }
+
+    /* Row Styling Warna Excel */
+    tr.row-belum td {
+      background-color: #fce4d6; /* Pink / Peach muda */
+    }
+
+    tr.row-total td {
+      background-color: #ededed;
+      font-weight: bold;
+      font-style: italic;
+    }
+
+    /* Cell Jumlah Total Warna Biru Khas Excel */
+    td.cell-blue-total {
+      background-color: #bdd7ee !important;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    /* Baris Khatam & Khotimin */
+    tr.row-khatam td {
+      background-color: #e2efda;
+    }
+
+    tr.row-khotimin td {
+      background-color: #ffff00 !important; /* Kuning Terang */
+      font-weight: bold;
+    }
+
+    /* Garis Pemisah Biru Halaman (Page Break Excel) */
+    .page-break-divider {
+      border-top: 2.5px solid #0000ff;
+      margin: 22px 0 16px 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Blok Keterangan Catatan Target */
+    .note-block {
+      font-size: 9.5pt;
+      margin: 6px 0 14px 2px;
+      line-height: 1.35;
+      position: relative;
+      z-index: 2;
+    }
+
+    .note-block .note-header {
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .note-block .note-item {
+      padding-left: 12px;
+    }
+
+    /* Print Setup A4 */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .toolbar-container {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        background-image: none;
+      }
+      .page-watermark {
+        display: none;
+      }
+      .page-break-divider {
+        page-break-after: always;
+        border-top: 1px dashed #999;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 12mm 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Toolbar -->
+  <div class="toolbar-container">
+    <div class="toolbar-left">
+      <span class="toolbar-title">📊 PANTAUAN PERKEMBANGAN HAFALAN</span>
+      <span class="badge-live"><span class="pulse-dot"></span> LIVE SUPABASE</span>
+    </div>
+
+    <div class="toolbar-right">
+      <div>
+        <label class="control-label" for="selBulan">Bulan Evaluasi:</label>
+        <select id="selBulan" onchange="renderReportData()">
+          <option value="07">Juli (Jul'26)</option>
+          <option value="08" selected>Agustus (Agust'26)</option>
+          <option value="09">September (Sept'26)</option>
+          <option value="10">Oktober (Okt'26)</option>
+          <option value="11">November (Nov'26)</option>
+          <option value="12">Desember (Des'26)</option>
+          <option value="01">Januari (Jan'27)</option>
+          <option value="02">Februari (Feb'27)</option>
+          <option value="03">Maret (Mar'27)</option>
+          <option value="04">April (Apr'27)</option>
+          <option value="05">Mei (Mei'27)</option>
+          <option value="06">Juni (Jun'27)</option>
+        </select>
+      </div>
+
+      <button class="btn-secondary" onclick="loadDataFromSupabase(true)">🔄 Segarkan Data</button>
+      <button class="btn-action" onclick="exportToExcel()">📥 Download File Excel (.xlsx)</button>
+      <button class="btn-secondary" onclick="window.print()">🖨️ Cetak / PDF</button>
+    </div>
+  </div>
+
+  <!-- Lembar Kerja Excel -->
+  <div class="sheet-wrapper" id="sheetContainer">
+    <!-- Watermarks -->
+    <div class="page-watermark watermark-p1">Page 1</div>
+    <div class="page-watermark watermark-p2">Page 2</div>
+
+    <!-- Judul Dokumen -->
+    <div class="doc-main-title">II. PANTAUAN PERKEMBANGAN HAFALAN SANTRI</div>
+
+    <!-- ========================================== -->
+    <!-- BAGIAN A: TARGET ZIYADAH (POJOKAN) -->
+    <!-- ========================================== -->
+    <div class="section-title">A. Target Ziyadah (Pojokan)</div>
+
+    <table class="excel-table" id="tableTargetPojokan" style="width: 100%;">
+      <thead>
+        <tr>
+          <th class="th-orange" style="width: 110px;">KETERANG<br>AN</th>
+          <th class="th-orange">Kelas VII</th>
+          <th class="th-orange">Kelas VIII</th>
+          <th class="th-orange">Kelas IX</th>
+          <th class="th-orange">Kelas X</th>
+          <th class="th-orange">Kelas XI</th>
+          <th class="th-orange">Kelas XII</th>
+          <th class="th-orange" style="width: 65px;">Jumla<br>h</th>
+          <th class="th-orange" style="width: 80px;">Persentase</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPojokan">
+        <!-- Dynamic Content -->
+        <tr><td colspan="9" style="text-align: center; padding: 12px; font-style: italic;">Memuat data santri & target...</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Keterangan Target Pojokan -->
+    <div class="note-block" id="noteTargetPojokan">
+      <div class="note-header">* Ket Target Pojokan =</div>
+      <div class="note-item">Kelas 7 : Ziadah 11 pojok</div>
+      <div class="note-item">Kelas 8 : Ziadah 11 pojok</div>
+      <div class="note-item">Kelas 9 : Ziadah 11 pojok</div>
+      <div class="note-item">Kelas 10 : Ziadah 11 pojok</div>
+      <div class="note-item">Kelas 11 : Ziadah 11 pojok</div>
+      <div class="note-item">Kelas 12 : Ziadah 11 pojok</div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- BAGIAN B: PRESENTASE TARGET ZIYADAH -->
+    <!-- ========================================== -->
+    <div class="section-title">B. Presentase Target Ziyadah (Pojokan)</div>
+
+    <table class="excel-table" id="tablePctPojokan" style="width: 280px;">
+      <thead>
+        <tr>
+          <th rowspan="2" class="th-orange" style="width: 100px;">KELAS</th>
+          <th colspan="2" class="th-orange header-month-label">Agustus</th>
+        </tr>
+        <tr>
+          <th class="th-orange" style="width: 85px;">Target</th>
+          <th class="th-orange" style="width: 95px;">Tidak Target</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPctPojokan">
+        <!-- Dynamic Content -->
+        <tr><td colspan="3" style="text-align: center; padding: 10px; font-style: italic;">Menghitung persentase...</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Garis Pemisah Biru Halaman (Page Break Blue Line) -->
+    <div class="page-break-divider"></div>
+
+    <!-- ========================================== -->
+    <!-- BAGIAN C: TARGET ZIYADAH LEMBAGA -->
+    <!-- ========================================== -->
+    <div class="section-title">C. Target Ziyadah Lembaga</div>
+
+    <table class="excel-table" id="tableTargetLembaga" style="width: 660px;">
+      <thead>
+        <tr>
+          <th class="th-orange" style="width: 110px;">KETERANG<br>AN</th>
+          <th class="th-orange">Kelas VII</th>
+          <th class="th-orange">Kelas VIII</th>
+          <th class="th-orange">Kelas IX</th>
+          <th class="th-orange">Kelas X</th>
+          <th class="th-orange">Kelas XI</th>
+          <th class="th-orange">Kelas XII</th>
+          <th class="th-orange" style="width: 65px;">Jumla<br>h</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyLembaga">
+        <!-- Dynamic Content -->
+        <tr><td colspan="8" style="text-align: center; padding: 12px; font-style: italic;">Memuat capaian lembaga...</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Keterangan Target Lembaga -->
+    <div class="note-block" id="noteTargetLembaga">
+      <div class="note-header">* Ket Target Lembaga =</div>
+      <div class="note-item">Kelas 7 : juz 1 pojok 14</div>
+      <div class="note-item">Kelas 8 : juz 6 pojok 20</div>
+      <div class="note-item">Kelas 9 : juz 11 pojok 20</div>
+      <div class="note-item">Kelas 10 : juz 16 pojok 20</div>
+      <div class="note-item">Kelas 11 : juz 21 pojok 20</div>
+      <div class="note-item">Kelas 12 : juz 26 pojok 20</div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- BAGIAN D: TARGET DERESAN -->
+    <!-- ========================================== -->
+    <div class="section-title" id="titleDeresan">D. Target Deresan</div>
+    <div style="font-weight: bold; font-size: 10pt; margin-left: 20px; margin-bottom: 6px;" id="subtitleDeresan">
+      Kelas 7 – 12 = 60 Pojok
+    </div>
+
+    <table class="excel-table" id="tableTargetDeresan" style="width: 100%;">
+      <thead>
+        <tr>
+          <th class="th-orange" style="width: 110px;">KETERANGAN</th>
+          <th class="th-orange">Kelas VII</th>
+          <th class="th-orange">Kelas VIII</th>
+          <th class="th-orange">Kelas IX</th>
+          <th class="th-orange">Kelas X</th>
+          <th class="th-orange">Kelas XI</th>
+          <th class="th-orange">Kelas XII</th>
+          <th class="th-orange" style="width: 65px;">Jumla<br>h</th>
+          <th class="th-orange" style="width: 80px;">Persentase</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyDeresan">
+        <!-- Dynamic Content -->
+        <tr><td colspan="9" style="text-align: center; padding: 12px; font-style: italic;">Memuat rekap deresan...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SCRIPT LOGIKA PENGOLAHAN DATABASE -->
+  <script>
+    const SUPABASE_URL = 'https://nkirqdfmppziridabvwb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5raXJxZGZtcHB6aXJpZGFidndiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDU5MDgsImV4cCI6MjEwNDQ4MTkwOH0.ctqZ3aw4j9_jSBI9uF2NO2YWJ1PpeM2yo_HU-yZUjXI';
+
+    let supabaseClient = null;
+    let rawSantri = [];
+    let rawLogs = [];
+    let customTargetsLembaga = {};
+    let customTargetsPojokan = {};
+    let customTargetsDeresan = {};
+
+    const POJOK_PER_JUZ = 20;
+
+    const MONTH_NAME_MAP = {
+      "07": "Juli", "08": "Agustus", "09": "September", "10": "Oktober",
+      "11": "November", "12": "Desember", "01": "Januari", "02": "Februari",
+      "03": "Maret", "04": "April", "05": "Mei", "06": "Juni"
+    };
+
+    // Default Target Lembaga (Sesuai gambar asli template pondok)
+    const DefaultTargetLembaga = {
+      "07": { "7": {j: 1, p: 6}, "8": {j: 6, p: 6}, "9": {j: 11, p: 6}, "10": {j: 16, p: 6}, "11": {j: 21, p: 6}, "12": {j: 26, p: 6} },
+      "08": { "7": {j: 1, p: 14},"8": {j: 6, p: 20},"9": {j: 11, p: 20},"10": {j: 16, p: 20},"11": {j: 21, p: 20},"12": {j: 26, p: 20} },
+      "09": { "7": {j: 2, p: 5}, "8": {j: 7, p: 5}, "9": {j: 12, p: 5}, "10": {j: 17, p: 5}, "11": {j: 22, p: 5}, "12": {j: 27, p: 5} },
+      "10": { "7": {j: 2, p: 16},"8": {j: 7, p: 16},"9": {j: 12, p: 16},"10": {j: 17, p: 16},"11": {j: 22, p: 16},"12": {j: 27, p: 16} },
+      "11": { "7": {j: 3, p: 7}, "8": {j: 8, p: 7}, "9": {j: 13, p: 7}, "10": {j: 18, p: 7}, "11": {j: 23, p: 7}, "12": {j: 28, p: 7} },
+      "12": { "7": {j: 3, p: 18},"8": {j: 8, p: 18},"9": {j: 13, p: 18},"10": {j: 18, p: 18},"11": {j: 23, p: 18},"12": {j: 28, p: 18} },
+      "01": { "7": {j: 4, p: 4}, "8": {j: 9, p: 4}, "9": {j: 14, p: 4}, "10": {j: 19, p: 4}, "11": {j: 24, p: 4}, "12": {j: 29, p: 4} },
+      "02": { "7": {j: 4, p: 12},"8": {j: 9, p: 12},"9": {j: 14, p: 12},"10": {j: 19, p: 12},"11": {j: 24, p: 12},"12": {j: 29, p: 12} },
+      "03": { "7": {j: 4, p: 18},"8": {j: 9, p: 18},"9": {j: 14, p: 18},"10": {j: 19, p: 18},"11": {j: 24, p: 18},"12": {j: 29, p: 18} },
+      "04": { "7": {j: 5, p: 5}, "8": {j: 10, p: 5},"9": {j: 15, p: 5}, "10": {j: 20, p: 5}, "11": {j: 25, p: 5}, "12": {j: 30, p: 5} },
+      "05": { "7": {j: 5, p: 14},"8": {j: 10, p: 14},"9": {j: 15, p: 14},"10": {j: 20, p: 14},"11": {j: 25, p: 14},"12": {j: 30, p: 14} },
+      "06": { "7": {j: 5, p: 20},"8": {j: 10, p: 20},"9": {j: 15, p: 20},"10": {j: 20, p: 20},"11": {j: 25, p: 20},"12": {j: 30, p: 20} }
+    };
+
+    // Default Target Pojokan Baru (Ziyadah) per Bulan
+    const DefaultTargetPojokan = {
+      "08": { "7": 11, "8": 11, "9": 11, "10": 11, "11": 11, "12": 11 },
+      "def": { "7": 20, "8": 20, "9": 20, "10": 20, "11": 20, "12": 20 }
+    };
+
+    // Default Target Deresan (Muroja'ah) per Bulan
+    const DefaultTargetDeresan = {
+      "08": { "7": 60, "8": 60, "9": 60, "10": 60, "11": 60, "12": 60 },
+      "def": { "7": 40, "8": 40, "9": 40, "10": 40, "11": 40, "12": 40 }
+    };
+
+    // Helper: Ekstraksi angka aman
+    function safeExtractNum(val) {
+      if (!val) return 0;
+      const m = String(val).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
+
+    // Helper: Konversi Juz & Pojok ke Absolut
+    function getAbsolutePojok(juz, pojok) {
+      const j = parseInt(juz) || 0;
+      const p = parseInt(pojok) || 0;
+      if (j >= 1 && j <= 30) {
+        return (j - 1) * POJOK_PER_JUZ + Math.min(Math.max(0, p), POJOK_PER_JUZ);
+      }
+      return 0;
+    }
+
+    // Helper: Pemetaan Kelas 7-12
+    function mapKelasTarget(kelasStr) {
+      if (!kelasStr) return null;
+      const s = String(kelasStr).toUpperCase().trim();
+      if (s.startsWith('12') || s.includes('XII')) return '12';
+      if (s.startsWith('11') || s.includes('XI')) return '11';
+      if (s.startsWith('10') || s.includes('X-') || s.includes('X ')) return '10';
+      if (s.startsWith('9') || s.includes('IX')) return '9';
+      if (s.startsWith('8') || s.includes('VIII')) return '8';
+      if (s.startsWith('7') || s.includes('VII')) return '7';
+      const m = s.match(/\b(7|8|9|10|11|12)\b/);
+      return m ? m[1] : null;
+    }
+
+    function formatVal(val) {
+      if (val === null || val === undefined || val === 0 || val === '0' || val === '-') {
+        return '-';
+      }
+      return val;
+    }
+
+    function getSupabaseInstance() {
+      if (!supabaseClient && window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return supabaseClient;
+    }
+
+    async function loadDataFromSupabase(isManualRefresh = false) {
+      const client = getSupabaseInstance();
+      if (!client) {
+        setTimeout(() => loadDataFromSupabase(isManualRefresh), 300);
+        return;
+      }
+
+      if (isManualRefresh) {
+        document.getElementById('tbodyPojokan').innerHTML = `
+          <tr><td colspan="9" style="text-align: center; padding: 12px; font-weight: bold; color: #0d5f32;">
+            Menyegarkan data dari server Supabase...
+          </td></tr>
+        `;
+      }
+
+      try {
+        // 1. Ambil Santri
+        const { data: dSantri } = await client.from('santri_rows').select('*');
+        if (dSantri) rawSantri = dSantri;
+
+        // 2. Ambil Target Custom jika ada
+        try {
+          const { data: dTL } = await client.from('target_lembaga_rows').select('*');
+          if (dTL) {
+            dTL.forEach(r => {
+              customTargetsLembaga[`${r.bulan}_${r.kelas}`] = { juz: r.juz || 0, pojokan: r.pojokan || 0 };
+            });
+          }
+        } catch(e) {}
+
+        try {
+          const { data: dTP } = await client.from('target_pojokan_rows').select('*');
+          if (dTP) {
+            dTP.forEach(r => {
+              customTargetsPojokan[`${r.bulan}_${r.kelas}`] = r.jumlah_pojokan;
+            });
+          }
+        } catch(e) {}
+
+        try {
+          const { data: dTD } = await client.from('target_deresan_rows').select('*');
+          if (dTD) {
+            dTD.forEach(r => {
+              customTargetsDeresan[`${r.bulan}_${r.kelas}`] = r.jumlah_pojokan;
+            });
+          }
+        } catch(e) {}
+
+        // 3. Ambil Seluruh Log Setoran
+        let allLogs = [];
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data: batch, error } = await client
+            .from('log_setoran_rows')
+            .select('*')
+            .range(from, from + pageSize - 1);
+
+          if (error || !batch || batch.length === 0) {
+            hasMore = false;
+          } else {
+            allLogs = allLogs.concat(batch);
+            if (batch.length < pageSize) {
+              hasMore = false;
+            } else {
+              from += pageSize;
+            }
+          }
+        }
+        rawLogs = allLogs;
+
+        // Render Laporan Sesuai Gambar
+        renderReportData();
+      } catch (err) {
+        console.error("Gagal memuat data:", err);
+      }
+    }
+
+    function renderReportData() {
+      const bulan = document.getElementById('selBulan').value;
+      const namaBulan = MONTH_NAME_MAP[bulan] || "Agustus";
+
+      // Update Label Bulan di Header Tabel B
+      document.querySelectorAll('.header-month-label').forEach(el => el.textContent = namaBulan);
+
+      // Inisialisasi santri map per kelas (7 s/d 12)
+      const KELAS_KEYS = ['7', '8', '9', '10', '11', '12'];
+      const santriMap = {};
+      const santriById = {};
+
+      KELAS_KEYS.forEach(k => {
+        santriMap[k] = [];
+      });
+
+      rawSantri.forEach(s => {
+        const cls = mapKelasTarget(s.kelas);
+        if (!cls || !santriMap[cls]) return;
+
+        const obj = {
+          ...s,
+          cls,
+          maxZiyadahAbs: 0,
+          totalZiyadahBulan: 0,
+          totalMurojaahBulan: 0,
+          hasLogsRecorded: false
+        };
+
+        santriMap[cls].push(obj);
+        santriById[s.id] = obj;
+        if (s.nis) santriById[String(s.nis).trim()] = obj;
+      });
+
+      // Proses Log Setoran
+      rawLogs.forEach(log => {
+        const s = santriById[log.santri_id];
+        if (!s) return;
+
+        let logBulan = '';
+        if (log.tanggal) {
+          const parts = String(log.tanggal).split(' ')[0].split('T')[0].split('-');
+          if (parts.length >= 2) logBulan = parts[1];
+        }
+
+        const keg = String(log.kegiatan || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isMurojaah = keg.includes('muroja') || keg.includes('muraja') || keg.includes('ulang');
+        const isZiyadah = keg.includes('ziyadah') || keg === '' || keg.includes('tambah');
+
+        if (logBulan === bulan) {
+          s.hasLogsRecorded = true;
+          let hal = parseFloat(String(log.jumlah_halaman || '0').replace(',', '.'));
+          if (isNaN(hal) || hal === 0) {
+            if (log.juz_awal && log.pojok_awal && log.juz_akhir && log.pojok_akhir) {
+              const st = getAbsolutePojok(log.juz_awal, log.pojok_awal);
+              const en = getAbsolutePojok(log.juz_akhir, log.pojok_akhir);
+              hal = Math.max(0, Math.abs(en - st) + 1);
+            } else {
+              hal = safeExtractNum(log.jumlah_halaman) || 0;
+            }
+          }
+
+          if (isMurojaah) s.totalMurojaahBulan += hal;
+          if (isZiyadah) s.totalZiyadahBulan += hal;
+        }
+
+        if (isZiyadah) {
+          const j = safeExtractNum(log.juz_akhir);
+          const p = safeExtractNum(log.pojok_akhir);
+          if (j >= 1 && j <= 30) {
+            const abs = getAbsolutePojok(j, p);
+            if (abs > s.maxZiyadahAbs) s.maxZiyadahAbs = abs;
+          }
+        }
+      });
+
+      // =========================================================================
+      // TABEL A: TARGET ZIYADAH (POJOKAN)
+      // =========================================================================
+      const statsPojokan = {
+        target: {},
+        belum: {},
+        total: {},
+        ketTarget: {}
+      };
+
+      let sumPojokanTarget = 0;
+      let sumPojokanBelum = 0;
+      let sumPojokanTotal = 0;
+
+      KELAS_KEYS.forEach(k => {
+        const targetMin = customTargetsPojokan[`${bulan}_${k}`] ?? 
+                          DefaultTargetPojokan[bulan]?.[k] ?? 
+                          DefaultTargetPojokan['def'][k] ?? 11;
+        statsPojokan.ketTarget[k] = targetMin;
+
+        let pass = 0;
+        let fail = 0;
+
+        santriMap[k].forEach(s => {
+          if (s.totalZiyadahBulan >= targetMin) {
+            pass++;
+          } else {
+            fail++;
+          }
+        });
+
+        statsPojokan.target[k] = pass;
+        statsPojokan.belum[k] = fail;
+        statsPojokan.total[k] = pass + fail;
+
+        sumPojokanTarget += pass;
+        sumPojokanBelum += fail;
+        sumPojokanTotal += (pass + fail);
+      });
+
+      const pctPojokanTarget = sumPojokanTotal > 0 ? Math.round((sumPojokanTarget / sumPojokanTotal) * 100) : 0;
+      const pctPojokanBelum = sumPojokanTotal > 0 ? Math.round((sumPojokanBelum / sumPojokanTotal) * 100) : 0;
+
+      document.getElementById('tbodyPojokan').innerHTML = `
+        <tr>
+          <td class="col-label">Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsPojokan.target[k]}</td>`).join('')}
+          <td class="col-total">${sumPojokanTarget}</td>
+          <td class="col-pct">${pctPojokanTarget}%</td>
+        </tr>
+        <tr class="row-belum">
+          <td class="col-label">Belum Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsPojokan.belum[k]}</td>`).join('')}
+          <td class="col-total">${sumPojokanBelum}</td>
+          <td class="col-pct">${pctPojokanBelum}%</td>
+        </tr>
+        <tr class="row-total">
+          <td class="col-label">Total Santri</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsPojokan.total[k]}</td>`).join('')}
+          <td class="cell-blue-total">${sumPojokanTotal}</td>
+          <td class="col-pct">100%</td>
+        </tr>
+      `;
+
+      // Update Keterangan Target Pojokan
+      document.getElementById('noteTargetPojokan').innerHTML = `
+        <div class="note-header">* Ket Target Pojokan =</div>
+        ${KELAS_KEYS.map(k => `<div class="note-item">Kelas ${k} : Ziadah ${statsPojokan.ketTarget[k]} pojok</div>`).join('')}
+      `;
+
+      // =========================================================================
+      // TABEL B: PRESENTASE TARGET ZIYADAH
+      // =========================================================================
+      const ROMAN_MAP = { '7': 'Kelas VII', '8': 'Kelas VIII', '9': 'Kelas IX', '10': 'Kelas X', '11': 'Kelas XI', '12': 'Kelas XII' };
+      let htmlB = '';
+
+      KELAS_KEYS.forEach(k => {
+        const tot = statsPojokan.total[k];
+        const passPct = tot > 0 ? Math.round((statsPojokan.target[k] / tot) * 100) : 0;
+        const failPct = tot > 0 ? (100 - passPct) : 0;
+
+        htmlB += `
+          <tr>
+            <td class="col-label">${ROMAN_MAP[k]}</td>
+            <td class="col-num">${passPct}%</td>
+            <td class="col-num">${failPct}%</td>
+          </tr>
+        `;
+      });
+      document.getElementById('tbodyPctPojokan').innerHTML = htmlB;
+
+      // =========================================================================
+      // TABEL C: TARGET ZIYADAH LEMBAGA
+      // =========================================================================
+      const statsLembaga = {
+        target: {},
+        belum: {},
+        khatam: {},
+        khotimin: {},
+        total: {},
+        ketLabel: {}
+      };
+
+      let sumLembagaTarget = 0;
+      let sumLembagaBelum = 0;
+      let sumLembagaKhatam = 0;
+      let sumLembagaKhotimin = 0;
+      let sumLembagaTotal = 0;
+
+      KELAS_KEYS.forEach(k => {
+        const customTL = customTargetsLembaga[`${bulan}_${k}`];
+        let targetAbs = 0;
+        let ketText = '';
+
+        if (customTL && (customTL.juz > 0 || customTL.pojokan > 0)) {
+          targetAbs = getAbsolutePojok(customTL.juz, customTL.pojokan);
+          ketText = `juz ${customTL.juz} pojok ${customTL.pojokan}`;
+        } else {
+          const defTL = DefaultTargetLembaga[bulan]?.[k] || { j: 1, p: 14 };
+          targetAbs = getAbsolutePojok(defTL.j, defTL.p);
+          ketText = `juz ${defTL.j} pojok ${defTL.p}`;
+        }
+        statsLembaga.ketLabel[k] = ketText;
+
+        let pass = 0;
+        let fail = 0;
+        let khatam = 0;
+        let khotimin = 0;
+
+        santriMap[k].forEach(s => {
+          const isKhatam = s.maxZiyadahAbs >= 30 * POJOK_PER_JUZ;
+          if (isKhatam) {
+            khatam++;
+            if (k === '12') khotimin++;
+          }
+
+          if (s.maxZiyadahAbs >= targetAbs) {
+            pass++;
+          } else {
+            fail++;
+          }
+        });
+
+        statsLembaga.target[k] = pass;
+        statsLembaga.belum[k] = fail;
+        statsLembaga.khatam[k] = khatam;
+        statsLembaga.khotimin[k] = khotimin;
+        statsLembaga.total[k] = pass + fail;
+
+        sumLembagaTarget += pass;
+        sumLembagaBelum += fail;
+        sumLembagaKhatam += khatam;
+        sumLembagaKhotimin += khotimin;
+        sumLembagaTotal += (pass + fail);
+      });
+
+      document.getElementById('tbodyLembaga').innerHTML = `
+        <tr>
+          <td class="col-label">Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsLembaga.target[k]}</td>`).join('')}
+          <td class="col-total">${sumLembagaTarget}</td>
+        </tr>
+        <tr class="row-belum">
+          <td class="col-label">Belum Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsLembaga.belum[k]}</td>`).join('')}
+          <td class="col-total">${sumLembagaBelum}</td>
+        </tr>
+        <tr class="row-khatam">
+          <td class="col-label">Khatam</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${formatVal(statsLembaga.khatam[k])}</td>`).join('')}
+          <td class="col-total">${formatVal(sumLembagaKhatam)}</td>
+        </tr>
+        <tr class="row-khotimin">
+          <td class="col-label">Khotimin</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${formatVal(statsLembaga.khotimin[k])}</td>`).join('')}
+          <td class="col-total">${formatVal(sumLembagaKhotimin)}</td>
+        </tr>
+        <tr class="row-total">
+          <td class="col-label">Total Santri</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsLembaga.total[k]}</td>`).join('')}
+          <td class="cell-blue-total">${sumLembagaTotal}</td>
+        </tr>
+      `;
+
+      // Update Keterangan Target Lembaga
+      document.getElementById('noteTargetLembaga').innerHTML = `
+        <div class="note-header">* Ket Target Lembaga =</div>
+        ${KELAS_KEYS.map(k => `<div class="note-item">Kelas ${k} : ${statsLembaga.ketLabel[k]}</div>`).join('')}
+      `;
+
+      // =========================================================================
+      // TABEL D: TARGET DERESAN
+      // =========================================================================
+      const statsDeresan = {
+        target: {},
+        belum: {},
+        belumRekap: {},
+        total: {}
+      };
+
+      let sumDeresanTarget = 0;
+      let sumDeresanBelum = 0;
+      let sumDeresanBelumRekap = 0;
+      let sumDeresanTotal = 0;
+      let targetDeresanMin = customTargetsDeresan[`${bulan}_7`] ?? 
+                             DefaultTargetDeresan[bulan]?.['7'] ?? 60;
+
+      KELAS_KEYS.forEach(k => {
+        const tMin = customTargetsDeresan[`${bulan}_${k}`] ?? 
+                     DefaultTargetDeresan[bulan]?.[k] ?? targetDeresanMin;
+        targetDeresanMin = tMin;
+
+        let pass = 0;
+        let fail = 0;
+        let unrecorded = 0;
+
+        santriMap[k].forEach(s => {
+          if (!s.hasLogsRecorded && s.totalMurojaahBulan === 0) {
+            unrecorded++;
+            fail++;
+          } else if (s.totalMurojaahBulan >= tMin) {
+            pass++;
+          } else {
+            fail++;
+          }
+        });
+
+        statsDeresan.target[k] = pass;
+        statsDeresan.belum[k] = fail;
+        statsDeresan.belumRekap[k] = unrecorded;
+        statsDeresan.total[k] = santriMap[k].length;
+
+        sumDeresanTarget += pass;
+        sumDeresanBelum += fail;
+        sumDeresanBelumRekap += unrecorded;
+        sumDeresanTotal += santriMap[k].length;
+      });
+
+      const pctDeresanTarget = sumDeresanTotal > 0 ? Math.round((sumDeresanTarget / sumDeresanTotal) * 100) : 0;
+      const pctDeresanBelum = sumDeresanTotal > 0 ? Math.round((sumDeresanBelum / sumDeresanTotal) * 100) : 0;
+      const pctDeresanUnrec = sumDeresanTotal > 0 ? Math.round((sumDeresanBelumRekap / sumDeresanTotal) * 100) : 0;
+
+      document.getElementById('subtitleDeresan').textContent = `Kelas 7 – 12 = ${targetDeresanMin} Pojok`;
+
+      document.getElementById('tbodyDeresan').innerHTML = `
+        <tr>
+          <td class="col-label">Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsDeresan.target[k]}</td>`).join('')}
+          <td class="col-total">${sumDeresanTarget}</td>
+          <td class="col-pct">${pctDeresanTarget}%</td>
+        </tr>
+        <tr class="row-belum">
+          <td class="col-label">Belum Target</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsDeresan.belum[k]}</td>`).join('')}
+          <td class="col-total">${sumDeresanBelum}</td>
+          <td class="col-pct">${pctDeresanBelum}%</td>
+        </tr>
+        <tr>
+          <td class="col-label">Belum Direkap</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${formatVal(statsDeresan.belumRekap[k])}</td>`).join('')}
+          <td class="col-total">${formatVal(sumDeresanBelumRekap)}</td>
+          <td class="col-pct">${pctDeresanUnrec}%</td>
+        </tr>
+        <tr class="row-total">
+          <td class="col-label">Total Santri</td>
+          ${KELAS_KEYS.map(k => `<td class="col-num">${statsDeresan.total[k]}</td>`).join('')}
+          <td class="cell-blue-total">${sumDeresanTotal}</td>
+          <td class="col-pct">100%</td>
+        </tr>
+      `;
+    }
+
+    function exportToExcel() {
+      const bulanVal = document.getElementById('selBulan').value;
+      const namaBulan = MONTH_NAME_MAP[bulanVal] || bulanVal;
+
+      const wb = XLSX.utils.book_new();
+
+      // Tambahkan Tabel A & B
+      const wsA = XLSX.utils.table_to_sheet(document.getElementById('tableTargetPojokan'));
+      XLSX.utils.book_append_sheet(wb, wsA, "A_Target_Pojokan");
+
+      const wsB = XLSX.utils.table_to_sheet(document.getElementById('tablePctPojokan'));
+      XLSX.utils.book_append_sheet(wb, wsB, "B_Persentase_Pojokan");
+
+      // Tambahkan Tabel C
+      const wsC = XLSX.utils.table_to_sheet(document.getElementById('tableTargetLembaga'));
+      XLSX.utils.book_append_sheet(wb, wsC, "C_Target_Lembaga");
+
+      // Tambahkan Tabel D
+      const wsD = XLSX.utils.table_to_sheet(document.getElementById('tableTargetDeresan'));
+      XLSX.utils.book_append_sheet(wb, wsD, "D_Target_Deresan");
+
+      XLSX.writeFile(wb, `Pantauan_Perkembangan_Hafalan_${namaBulan}_2026.xlsx`);
+    }
+
+    // Auto load saat DOM selesai dimuat
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDataFromSupabase();
+    });
+  </script>
+</body>
+</html>
